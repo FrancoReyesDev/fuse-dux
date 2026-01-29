@@ -12,14 +12,12 @@ import {
 } from "~/components/ui/dialog";
 import type { Route } from "./+types/upload";
 import { Spinner } from "~/components/ui/spinner";
-import { pipe, Stream, Effect, Console } from "effect";
-import type { ProductCsvRow } from "~/types/product-csv-row";
+import { pipe, Stream, Effect, Console, Chunk } from "effect";
 import { parseCsvLine } from "~/lib/parse-csv-line";
 import { mapProductCsvRow } from "~/lib/map-product-csv-row";
 import { FUSE_INDEX_NAME, PRODUCTS_NAME } from "~/constants";
 import Fuse from "fuse.js";
-
-type FuseIndexProduct = Pick<ProductCsvRow, "codigo" | "producto">;
+import type { FuseIndexProduct } from "~/types/fuse-index-product";
 
 export async function action({ request, context }: Route.ActionArgs) {
   const formData = await request.formData();
@@ -32,7 +30,6 @@ export async function action({ request, context }: Route.ActionArgs) {
 
   const bucket = context.cloudflare.env.fuse_dux;
   const decoder = new TextDecoder("utf-8");
-  const encoder = new TextEncoder();
 
   const program = pipe(
     Stream.fromReadableStream(
@@ -46,54 +43,68 @@ export async function action({ request, context }: Route.ActionArgs) {
     Stream.map(mapProductCsvRow),
     Stream.broadcast(2, 64),
     Stream.flatMap(([toR2Stream, toFuseStream]) =>
-      Effect.gen(function* () {
-        const readableStream = Stream.toReadableStream(
-          toR2Stream.pipe(
-            Stream.map((product) => encoder.encode(JSON.stringify(product))),
-          ),
-        );
-
-        yield* Effect.tryPromise({
-          try: () =>
-            bucket.put(PRODUCTS_NAME, readableStream, {
-              httpMetadata: { contentType: "application/json" },
-            }),
-          catch: (e) => new Error("Failed to save products", { cause: e }),
-        });
-
-        yield* pipe(
-          toFuseStream,
-          Stream.runFold(
-            [] as Array<FuseIndexProduct>,
-            (acc, { codigo, producto }) => {
-              acc.push({ codigo, producto });
-              return acc;
-            },
-          ),
-          Effect.flatMap((products) =>
-            Effect.try({
-              try: () => Fuse.createIndex(["codigo", "producto"], products),
-              catch: (e) =>
-                new Error("Failed to create fuse index", { cause: e }),
-            }),
-          ),
-          Effect.flatMap((fuseIndex) =>
-            Effect.tryPromise({
-              try: () =>
-                bucket.put(FUSE_INDEX_NAME, JSON.stringify(fuseIndex), {
-                  httpMetadata: { contentType: "application/json" },
+      Effect.all(
+        [
+          Effect.gen(function* () {
+            const ndjson = yield* pipe(
+              toR2Stream,
+              Stream.mapEffect((row) =>
+                Effect.try({
+                  try: () => JSON.stringify(row),
+                  catch: (error) =>
+                    new Error("Failed to parse row", { cause: error }),
                 }),
-              catch: (e) =>
-                new Error("Failed to save fuse index", { cause: e }),
-            }),
-          ),
-        );
-      }),
+              ),
+              Stream.runCollect,
+              Effect.map(Chunk.toArray),
+              Effect.map((lines) => lines.join("\n")),
+            );
+
+            yield* Effect.tryPromise({
+              try: () =>
+                bucket.put(PRODUCTS_NAME, ndjson, {
+                  httpMetadata: { contentType: "application/x-ndjson" },
+                }),
+              catch: (e) => new Error("Failed to save products", { cause: e }),
+            });
+          }),
+          Effect.gen(function* () {
+            yield* pipe(
+              toFuseStream,
+              Stream.runFold(
+                [] as Array<FuseIndexProduct>,
+                (acc, { codigo, producto }) => {
+                  acc.push({ codigo, producto });
+                  return acc;
+                },
+              ),
+              Effect.flatMap((products) =>
+                Effect.try({
+                  try: () => Fuse.createIndex(["codigo", "producto"], products),
+                  catch: (e) =>
+                    new Error("Failed to create fuse index", { cause: e }),
+                }),
+              ),
+              Effect.flatMap((fuseIndex) =>
+                Effect.tryPromise({
+                  try: () =>
+                    bucket.put(FUSE_INDEX_NAME, JSON.stringify(fuseIndex), {
+                      httpMetadata: { contentType: "application/json" },
+                    }),
+                  catch: (e) =>
+                    new Error("Failed to save fuse index", { cause: e }),
+                }),
+              ),
+            );
+          }),
+        ],
+        { concurrency: "unbounded" },
+      ),
     ),
     Stream.runDrain,
   );
 
-  return await pipe(
+  const response = await pipe(
     program,
     Effect.tap(() => Console.log("Program finished")),
     Effect.tapError((e) => Console.error("Program failed", e)),
@@ -104,9 +115,13 @@ export async function action({ request, context }: Route.ActionArgs) {
     Effect.scoped,
     Effect.runPromise,
   );
+
+  console.log({ response });
+
+  return response;
 }
 
-export default function UploadRoute({ actionData }: Route.ComponentProps) {
+export default function Upload({ actionData }: Route.ComponentProps) {
   const navigation = useNavigation();
   const navigate = useNavigate();
   const isSubmitting = navigation.state === "submitting";
