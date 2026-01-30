@@ -1,4 +1,4 @@
-export interface ProductCsvRow {
+export interface Product {
   codigo: string;
   producto: string;
 

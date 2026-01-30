@@ -1,5 +1,3 @@
-import type { ProductCsvRow } from "~/types/product-csv-row";
-
 interface Params {
   producto: string;
   credito3Pagos: string;

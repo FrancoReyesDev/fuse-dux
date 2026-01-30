@@ -6,19 +6,25 @@ import {
   redirect,
   useSearchParams,
   type ShouldRevalidateFunction,
+  redirectDocument,
 } from "react-router";
 import { Button } from "~/components/ui/button";
 import { FUSE_INDEX_NAME, PRODUCTS_NAME } from "~/constants";
 import { ProductsTable } from "~/components/products-table";
-import { CustomProductDialog } from "~/components/custom-product-dialog";
-import type { ProductCsvRow } from "~/types/product-csv-row";
+import type { Product } from "~/types/product";
 import type { FuseIndexProduct } from "~/types/fuse-index-product";
 import { Input } from "~/components/ui/input";
 import { useEffect, useState } from "react";
 import { useDebounce } from "use-debounce";
-import { Settings } from "lucide-react";
 
-let fuse: Fuse<ProductCsvRow> | null = null;
+import { getConfigFromKv } from "~/lib/get-config-from-kv";
+import { Effect } from "effect";
+import { AppSidebar } from "~/components/app-sidebar";
+
+let fuse: {
+  body: Fuse<Product>;
+  buildedAt: Date;
+} | null = null;
 
 export function meta({}: Route.MetaArgs) {
   return [
@@ -47,12 +53,23 @@ export async function loader({ context, request }: Route.LoaderArgs) {
   const bucket = context.cloudflare.env.fuse_dux_bucket;
   const fuseIndexResponse = await bucket.get(FUSE_INDEX_NAME);
   const productsResponse = await bucket.get(PRODUCTS_NAME);
+  const config = await getConfigFromKv(context.cloudflare.env.fuse_dux_kv).pipe(
+    Effect.orElse(() => Effect.succeed(null)),
+    Effect.runPromise,
+  );
+
   let construction = false;
 
-  if (fuseIndexResponse === null || productsResponse === null)
-    return url.pathname === "/" ? redirect("/upload") : null;
+  if (
+    fuseIndexResponse === null ||
+    productsResponse === null ||
+    config === null
+  )
+    return url.pathname === "/" ? redirectDocument("/settings") : null;
 
-  if (!fuse) {
+  const fuseIndexUploadedAt = fuseIndexResponse.uploaded;
+
+  if (!fuse || fuse.buildedAt < fuseIndexUploadedAt) {
     construction = true;
     const productsIndex = await fuseIndexResponse
       .json()
@@ -63,32 +80,34 @@ export async function loader({ context, request }: Route.LoaderArgs) {
     const products = await productsResponse
       .text()
       .then(
-        (text) =>
-          text.split("\n").map((line) => JSON.parse(line)) as ProductCsvRow[],
+        (text) => text.split("\n").map((line) => JSON.parse(line)) as Product[],
       );
 
-    fuse = new Fuse<ProductCsvRow>(
-      products,
-      {
-        threshold: 0.3,
-        distance: 100,
-        ignoreLocation: true,
-        minMatchCharLength: 2,
-        includeMatches: false,
-        shouldSort: true,
-      },
-      productsIndex,
-    );
+    fuse = {
+      body: new Fuse<Product>(
+        products,
+        {
+          threshold: 0.3,
+          distance: 100,
+          ignoreLocation: true,
+          minMatchCharLength: 2,
+          includeMatches: false,
+          shouldSort: true,
+        },
+        productsIndex,
+      ),
+      buildedAt: fuseIndexUploadedAt,
+    };
   }
 
   const search = searchParams.get("search");
 
   if (search && search.trim().length > 0) {
-    const results = fuse.search(search, { limit: 10 });
-    return { results, construction };
+    const results = fuse.body.search(search, { limit: 10 });
+    return { results, construction, config };
   }
 
-  return { results: [], construction };
+  return { results: [], construction, config };
 }
 
 export default function Home({ loaderData }: Route.ComponentProps) {
@@ -96,6 +115,9 @@ export default function Home({ loaderData }: Route.ComponentProps) {
   const [inputSearch, setInputSearch] = useState(
     searchParams.get("search") || "",
   );
+
+  console.log(loaderData?.construction);
+
   const [searchDebounce] = useDebounce(inputSearch, 500);
 
   useEffect(() => {
@@ -103,36 +125,27 @@ export default function Home({ loaderData }: Route.ComponentProps) {
     if (searchValue.length > 0) {
       setSearchParams({ search: searchValue });
     }
-  }, [searchDebounce, searchParams]);
+  }, [searchDebounce]);
 
   return (
-    <div className="container mx-auto py-10 space-y-6">
-      <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight">Fuse Dux</h1>
-          <p className="text-muted-foreground">
-            Buscador de productos y precios
-          </p>
+    <>
+      <AppSidebar orders={[]} config={loaderData!.config} />
+      <div className="flex flex-1 flex-col gap-4 p-4 md:p-8">
+        <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+          <div className="flex items-center gap-2">
+            <Input
+              placeholder="Buscar productos..."
+              value={inputSearch}
+              onChange={(e) => setInputSearch(e.target.value)}
+              className="w-75"
+            />
+          </div>
         </div>
-        <div className="flex items-center gap-2">
-          <Input
-            placeholder="Buscar productos..."
-            value={inputSearch}
-            onChange={(e) => setInputSearch(e.target.value)}
-            className="w-75"
-          />
-          <CustomProductDialog />
-          <Button asChild variant={"outline"} title="Configuración">
-            <Link to="/settings">
-              <Settings />
-            </Link>
-          </Button>
-        </div>
+
+        <ProductsTable results={loaderData!.results || []} />
+
+        <Outlet />
       </div>
-
-      <ProductsTable results={loaderData?.results || []} />
-
-      <Outlet />
-    </div>
+    </>
   );
 }

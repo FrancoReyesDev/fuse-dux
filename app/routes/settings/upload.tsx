@@ -36,7 +36,7 @@ export async function action({ request, context }: Route.ActionArgs) {
       () => file.stream(),
       (e) => new Error("Failed to parse CSV", { cause: e }),
     ),
-    Stream.map((chunk) => decoder.decode(chunk)),
+    Stream.map((chunk) => decoder.decode(chunk, { stream: true })),
     Stream.splitLines,
     Stream.drop(skipRowsNumber),
     Stream.map(parseCsvLine),
@@ -124,7 +124,7 @@ export default function Settings() {
   const isUploading = uploadFetcher.state === "submitting";
 
   return (
-    <Card>
+    <Card className="max-w-2xl">
       <CardHeader>
         <CardTitle>Cargar Productos</CardTitle>
         <CardDescription>

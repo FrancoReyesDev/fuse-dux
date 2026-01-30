@@ -8,16 +8,16 @@ import {
 } from "~/components/ui/table";
 import { Button } from "~/components/ui/button";
 import { Copy, Check } from "lucide-react";
-import type { ProductCsvRow } from "~/types/product-csv-row";
+import type { Product } from "~/types/product";
 import type { FuseResult } from "fuse.js";
 import { genCopyText } from "~/lib/gen-copy-text";
 import { useState } from "react";
 
 interface ProductsTableProps {
-  results: FuseResult<ProductCsvRow>[];
+  results: FuseResult<Product>[];
 }
 
-function CopyButton({ product }: { product: ProductCsvRow }) {
+function CopyButton({ product }: { product: Product }) {
   const [copied, setCopied] = useState(false);
 
   const handleCopy = () => {

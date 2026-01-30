@@ -17,15 +17,22 @@ import {
 } from "~/components/ui/field";
 import { genCopyText } from "~/lib/gen-copy-text";
 import { Copy, Check, Calculator } from "lucide-react";
-import type { ProductCsvRow } from "~/types/product-csv-row";
+import type { Product } from "~/types/product";
+import type { ConfigConstants } from "~/types/config-constants";
 
-export function CustomProductDialog() {
+interface Props {
+  configs: ConfigConstants;
+  children?: React.ReactNode;
+}
+
+export function CustomProductDialog({ configs, children }: Props) {
   const [open, setOpen] = useState(false);
   const [titulo, setTitulo] = useState("");
   const [costo, setCosto] = useState<number | "">("");
+  const { profitFactorOptions, creditCardFactor, threeInstallmentsFactor } =
+    configs;
   const [profit, setProfit] = useState<number | "">(""); // Multiplicador Efectivo
-  const [factorTarjeta, setFactorTarjeta] = useState<number | "">(""); // Multiplicador Tarjeta
-  const [factor3Cuotas, setFactor3Cuotas] = useState<number | "">(""); // Multiplicador 3 Cuotas
+
   const [previewText, setPreviewText] = useState("");
   const [copied, setCopied] = useState(false);
 
@@ -36,39 +43,12 @@ export function CustomProductDialog() {
     }
 
     const costNum = Number(costo);
-    const profitNum = Number(profit) || 1;
-    const factorTarjetaNum = Number(factorTarjeta) || 1;
-    const factor3CuotasNum = Number(factor3Cuotas) || 1;
+    const profitNum = profit || 1;
+    const price = costNum * profitNum;
 
-    const efTransVal = Math.round(costNum * profitNum);
-    const credVal = Math.round(costNum * factorTarjetaNum);
-    const tresPagosVal = Math.round(costNum * factor3CuotasNum);
-
-    const mockProduct: ProductCsvRow = {
-      codigo: "CUSTOM",
-      producto: titulo,
-      precios: {
-        efTrans: efTransVal.toLocaleString("es-AR"),
-        credDebQr: credVal.toLocaleString("es-AR"),
-        credito3Pagos: tresPagosVal.toLocaleString("es-AR"),
-        // Fill other required fields with defaults
-        credito6Cuotas: "0",
-        hotSale: "0",
-        mayorista: "0",
-        meli: "0",
-        meli12Cuotas: "0",
-        meli3Cuotas: "0",
-        meli6Cuotas: "0",
-        meli9Cuotas: "0",
-        meliBajoInteres: "0",
-      },
-      stock: {
-        depositoHowler: "0",
-        depositoSanJose: "0",
-        full: "0",
-        localSanJuan: "0",
-      },
-    };
+    const efTransVal = Math.round(price);
+    const credVal = Math.round(price * creditCardFactor);
+    const tresPagosVal = Math.round(price * threeInstallmentsFactor);
 
     setPreviewText(
       genCopyText({
@@ -78,7 +58,7 @@ export function CustomProductDialog() {
         credito3Pagos: tresPagosVal.toLocaleString("es-AR"),
       }),
     );
-  }, [titulo, costo, profit, factorTarjeta, factor3Cuotas]);
+  }, [titulo, costo, profit]);
 
   const handleCopy = () => {
     navigator.clipboard.writeText(previewText);
@@ -89,12 +69,14 @@ export function CustomProductDialog() {
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Button variant="outline" className="gap-2">
-          <Calculator className="h-4 w-4" />
-          Calculadora Custom
-        </Button>
+        {children || (
+          <Button variant="outline" className="gap-2">
+            <Calculator className="h-4 w-4" />
+            Calculadora Custom
+          </Button>
+        )}
       </DialogTrigger>
-      <DialogContent className="sm:max-w-[425px]">
+      <DialogContent className="sm:max-w-106.25">
         <DialogHeader>
           <DialogTitle>Generador Custom</DialogTitle>
           <DialogDescription>
@@ -110,7 +92,7 @@ export function CustomProductDialog() {
                 value={titulo}
                 onChange={(e) => setTitulo(e.target.value)}
                 autoFocus
-                placeholder="Ej: Samsung Galaxy S21"
+                placeholder="Ej: Alimento para gato"
               />
             </FieldContent>
           </Field>
@@ -132,11 +114,8 @@ export function CustomProductDialog() {
           <Field>
             <FieldLabel>Ganancia (Seleccionar)</FieldLabel>
             <FieldContent>
-              <div className="text-2xl font-bold tracking-tight mb-2">
-                {profit ? `${profit}x` : "---"}
-              </div>
               <div className="flex flex-wrap gap-2">
-                {["1.3", "1.5", "1.8"].map((f) => (
+                {profitFactorOptions.map((f) => (
                   <Button
                     key={f}
                     variant={profit === Number(f) ? "default" : "outline"}

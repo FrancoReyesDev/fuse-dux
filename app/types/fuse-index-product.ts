@@ -1,3 +1,3 @@
-import type { ProductCsvRow } from "./product-csv-row";
+import type { Product } from "./product";
 
-export type FuseIndexProduct = Pick<ProductCsvRow, "codigo" | "producto">;
+export type FuseIndexProduct = Pick<Product, "codigo" | "producto">;

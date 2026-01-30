@@ -1,6 +1,6 @@
-import type { ProductCsvRow } from "~/types/product-csv-row";
+import type { Product } from "~/types/product";
 
-export function mapProductCsvRow(row: string[]): ProductCsvRow {
+export function mapProductCsvRow(row: string[]): Product {
   return {
     codigo: row[0],
     producto: row[1],
