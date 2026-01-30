@@ -9,7 +9,12 @@ import {
   DialogTrigger,
 } from "~/components/ui/dialog";
 import { Input } from "~/components/ui/input";
-import { Label } from "~/components/ui/label";
+import {
+  Field,
+  FieldContent,
+  FieldDescription,
+  FieldLabel,
+} from "~/components/ui/field";
 import { genCopyText } from "~/lib/gen-copy-text";
 import { Copy, Check, Calculator } from "lucide-react";
 import type { ProductCsvRow } from "~/types/product-csv-row";
@@ -25,7 +30,7 @@ export function CustomProductDialog() {
   const [copied, setCopied] = useState(false);
 
   useEffect(() => {
-    if (!titulo || !costo || costo === "") {
+    if (!titulo || !costo) {
       setPreviewText("");
       return;
     }
@@ -65,7 +70,14 @@ export function CustomProductDialog() {
       },
     };
 
-    setPreviewText(genCopyText(mockProduct));
+    setPreviewText(
+      genCopyText({
+        producto: titulo,
+        efTrans: efTransVal.toLocaleString("es-AR"),
+        credDebQr: credVal.toLocaleString("es-AR"),
+        credito3Pagos: tresPagosVal.toLocaleString("es-AR"),
+      }),
+    );
   }, [titulo, costo, profit, factorTarjeta, factor3Cuotas]);
 
   const handleCopy = () => {
@@ -89,74 +101,58 @@ export function CustomProductDialog() {
             Calcula precios y genera el texto para un producto manual.
           </DialogDescription>
         </DialogHeader>
-        <div className="grid gap-4 py-4">
-          <div className="grid grid-cols-4 items-center gap-4">
-            <Label htmlFor="titulo" className="text-right">
-              Titulo
-            </Label>
-            <Input
-              id="titulo"
-              value={titulo}
-              onChange={(e) => setTitulo(e.target.value)}
-              className="col-span-3"
-              autoFocus
-            />
-          </div>
-          <div className="grid grid-cols-4 items-center gap-4">
-            <Label htmlFor="costo" className="text-right">
-              Costo Base
-            </Label>
-            <Input
-              id="costo"
-              type="number"
-              value={costo}
-              onChange={(e) => setCosto(Number(e.target.value))}
-              className="col-span-3"
-              step="0.01"
-            />
-          </div>
-          <div className="grid grid-cols-4 items-center gap-4">
-            <Label htmlFor="profit" className="text-right text-xs">
-              Factor Efvo.
-            </Label>
-            <Input
-              id="profit"
-              type="number"
-              value={profit}
-              onChange={(e) => setProfit(Number(e.target.value))}
-              className="col-span-3"
-              step="0.01"
-              placeholder="Ej: 1.5"
-            />
-          </div>
-          <div className="grid grid-cols-4 items-center gap-4">
-            <Label htmlFor="factorTarjeta" className="text-right text-xs">
-              Factor Tarjeta
-            </Label>
-            <Input
-              id="factorTarjeta"
-              type="number"
-              value={factorTarjeta}
-              onChange={(e) => setFactorTarjeta(Number(e.target.value))}
-              className="col-span-3"
-              step="0.01"
-              placeholder="Ej: 1.6"
-            />
-          </div>
-          <div className="grid grid-cols-4 items-center gap-4">
-            <Label htmlFor="factor3Cuotas" className="text-right text-xs">
-              Factor 3 Cuotas
-            </Label>
-            <Input
-              id="factor3Cuotas"
-              type="number"
-              value={factor3Cuotas}
-              onChange={(e) => setFactor3Cuotas(Number(e.target.value))}
-              className="col-span-3"
-              step="0.01"
-              placeholder="Ej: 1.8"
-            />
-          </div>
+        <div className="grid gap-6 py-4">
+          <Field>
+            <FieldLabel htmlFor="titulo">Título</FieldLabel>
+            <FieldContent>
+              <Input
+                id="titulo"
+                value={titulo}
+                onChange={(e) => setTitulo(e.target.value)}
+                autoFocus
+                placeholder="Ej: Samsung Galaxy S21"
+              />
+            </FieldContent>
+          </Field>
+
+          <Field>
+            <FieldLabel htmlFor="costo">Costo Base</FieldLabel>
+            <FieldContent>
+              <Input
+                id="costo"
+                type="number"
+                value={costo}
+                onChange={(e) => setCosto(Number(e.target.value))}
+                step="0.01"
+                placeholder="0.00"
+              />
+            </FieldContent>
+          </Field>
+
+          <Field>
+            <FieldLabel>Ganancia (Seleccionar)</FieldLabel>
+            <FieldContent>
+              <div className="text-2xl font-bold tracking-tight mb-2">
+                {profit ? `${profit}x` : "---"}
+              </div>
+              <div className="flex flex-wrap gap-2">
+                {["1.3", "1.5", "1.8"].map((f) => (
+                  <Button
+                    key={f}
+                    variant={profit === Number(f) ? "default" : "outline"}
+                    size="sm"
+                    className="h-9 px-4"
+                    onClick={() => setProfit(Number(f))}
+                  >
+                    {f}
+                  </Button>
+                ))}
+              </div>
+              <FieldDescription>
+                Selecciona uno de los factores configurados.
+              </FieldDescription>
+            </FieldContent>
+          </Field>
         </div>
 
         {previewText && (

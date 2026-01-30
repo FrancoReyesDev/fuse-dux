@@ -35,8 +35,14 @@
   "r2_buckets": [
     {
       "bucket_name": "fuse-dux",
-      "binding": "fuse_dux",
+      "binding": "fuse_dux_bucket",
       "remote": true,
+    },
+  ],
+  "kv_namespaces": [
+    {
+      "binding": "fuse_dux_kv",
+      "id": "0e56246939254dc2bae13e440fee13e6",
     },
   ],
   /**

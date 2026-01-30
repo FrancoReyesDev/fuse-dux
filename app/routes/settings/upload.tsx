@@ -1,23 +1,23 @@
-import { data } from "react-router";
-import { Form, useNavigation, useNavigate } from "react-router";
+import { data, useFetcher } from "react-router";
 import { Button } from "~/components/ui/button";
 import { Input } from "~/components/ui/input";
 import { Label } from "~/components/ui/label";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-} from "~/components/ui/dialog";
-import type { Route } from "./+types/upload";
 import { Spinner } from "~/components/ui/spinner";
-import { pipe, Stream, Effect, Console, Chunk } from "effect";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardFooter,
+  CardHeader,
+  CardTitle,
+} from "~/components/ui/card";
+import { Chunk, Console, Effect, pipe, Stream } from "effect";
 import { parseCsvLine } from "~/lib/parse-csv-line";
 import { mapProductCsvRow } from "~/lib/map-product-csv-row";
 import { FUSE_INDEX_NAME, PRODUCTS_NAME } from "~/constants";
-import Fuse from "fuse.js";
 import type { FuseIndexProduct } from "~/types/fuse-index-product";
+import Fuse from "fuse.js";
+import type { Route } from "./+types/upload";
 
 export async function action({ request, context }: Route.ActionArgs) {
   const formData = await request.formData();
@@ -28,7 +28,7 @@ export async function action({ request, context }: Route.ActionArgs) {
     return data({ success: false, error: "No file uploaded" }, { status: 400 });
   }
 
-  const bucket = context.cloudflare.env.fuse_dux;
+  const bucket = context.cloudflare.env.fuse_dux_bucket;
   const decoder = new TextDecoder("utf-8");
 
   const program = pipe(
@@ -116,30 +116,23 @@ export async function action({ request, context }: Route.ActionArgs) {
     Effect.runPromise,
   );
 
-  console.log({ response });
-
   return response;
 }
 
-export default function Upload({ actionData }: Route.ComponentProps) {
-  const navigation = useNavigation();
-  const navigate = useNavigate();
-  const isSubmitting = navigation.state === "submitting";
-
-  console.log(actionData);
+export default function Settings() {
+  const uploadFetcher = useFetcher();
+  const isUploading = uploadFetcher.state === "submitting";
 
   return (
-    <Dialog open={true} onOpenChange={(open) => !open && navigate("..")}>
-      <DialogContent className="sm:max-w-md">
-        <DialogHeader>
-          <DialogTitle>Subir CSV</DialogTitle>
-          <DialogDescription>
-            Selecciona un archivo CSV que cumpla con el formato para subirlo al
-            sistema.
-          </DialogDescription>
-        </DialogHeader>
-
-        <div className="rounded-md bg-yellow-50 p-4 text-sm text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-200">
+    <Card>
+      <CardHeader>
+        <CardTitle>Cargar Productos</CardTitle>
+        <CardDescription>
+          Sube el archivo CSV con la lista de precios actualizada.
+        </CardDescription>
+      </CardHeader>
+      <CardContent>
+        <div className="rounded-md bg-yellow-50 p-4 text-sm text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-200 mb-6">
           <p className="font-semibold mb-2">
             Importante: El orden de las columnas debe ser:
           </p>
@@ -169,9 +162,13 @@ export default function Upload({ actionData }: Route.ComponentProps) {
           </div>
         </div>
 
-        <Form method="post" encType="multipart/form-data" className="space-y-6">
+        <uploadFetcher.Form
+          method="post"
+          encType="multipart/form-data"
+          className="space-y-4"
+        >
           <div className="space-y-2">
-            <Label htmlFor="file">CSV</Label>
+            <Label htmlFor="file">Archivo CSV</Label>
             <Input
               id="file"
               name="file"
@@ -182,34 +179,35 @@ export default function Upload({ actionData }: Route.ComponentProps) {
             />
           </div>
           <div className="space-y-2">
-            <Label htmlFor="skipRows">Saltar filas</Label>
+            <Label htmlFor="skipRows">Filas a saltar</Label>
             <Input
               id="skipRows"
               name="skipRows"
               type="number"
               defaultValue={0}
               required
-              className="cursor-pointer"
             />
           </div>
 
           <Button
             type="submit"
-            className={`w-full ${actionData?.success ? "bg-green-500" : ""}`}
-            disabled={isSubmitting}
+            className={`w-full ${
+              uploadFetcher.data?.success ? "bg-green-500" : ""
+            }`}
+            disabled={isUploading}
           >
-            {isSubmitting ? (
+            {isUploading ? (
               <>
                 <Spinner /> Subiendo...
               </>
-            ) : actionData?.success ? (
+            ) : uploadFetcher.data?.success ? (
               "Archivo subido exitosamente"
             ) : (
               "Subir archivo"
             )}
           </Button>
-        </Form>
-      </DialogContent>
-    </Dialog>
+        </uploadFetcher.Form>
+      </CardContent>
+    </Card>
   );
 }

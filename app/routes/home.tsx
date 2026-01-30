@@ -16,6 +16,7 @@ import type { FuseIndexProduct } from "~/types/fuse-index-product";
 import { Input } from "~/components/ui/input";
 import { useEffect, useState } from "react";
 import { useDebounce } from "use-debounce";
+import { Settings } from "lucide-react";
 
 let fuse: Fuse<ProductCsvRow> | null = null;
 
@@ -43,7 +44,7 @@ export const shouldRevalidate: ShouldRevalidateFunction = ({
 export async function loader({ context, request }: Route.LoaderArgs) {
   const url = new URL(request.url);
   const searchParams = url.searchParams;
-  const bucket = context.cloudflare.env.fuse_dux;
+  const bucket = context.cloudflare.env.fuse_dux_bucket;
   const fuseIndexResponse = await bucket.get(FUSE_INDEX_NAME);
   const productsResponse = await bucket.get(PRODUCTS_NAME);
   let construction = false;
@@ -121,8 +122,10 @@ export default function Home({ loaderData }: Route.ComponentProps) {
             className="w-75"
           />
           <CustomProductDialog />
-          <Button asChild>
-            <Link to="/upload">Subir CSV</Link>
+          <Button asChild variant={"outline"} title="Configuración">
+            <Link to="/settings">
+              <Settings />
+            </Link>
           </Button>
         </div>
       </div>
