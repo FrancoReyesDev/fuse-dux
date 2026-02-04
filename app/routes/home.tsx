@@ -20,6 +20,7 @@ import { useDebounce } from "use-debounce";
 import { getConfigFromKv } from "~/lib/get-config-from-kv";
 import { Effect } from "effect";
 import { AppSidebar } from "~/components/app-sidebar";
+import { parseNDJsonEffect } from "~/utils/parse-ndjson-effect";
 
 let fuse: {
   body: Fuse<Product>;
@@ -77,11 +78,9 @@ export async function loader({ context, request }: Route.LoaderArgs) {
         Fuse.parseIndex<FuseIndexProduct>(fuseIndexProducts as any),
       );
 
-    const products = await productsResponse
-      .text()
-      .then(
-        (text) => text.split("\n").map((line) => JSON.parse(line)) as Product[],
-      );
+    const products = await parseNDJsonEffect<Product>(
+      productsResponse.body,
+    ).pipe(Effect.runPromise);
 
     fuse = {
       body: new Fuse<Product>(

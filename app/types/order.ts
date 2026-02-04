@@ -1,69 +1,46 @@
 import type { Product } from "./product";
 
-/**
- * Represents a customer in the system.
- */
 export interface Customer {
-  /** Full name of the customer */
   name: string;
-  /** Primary contact phone number. Mandatory. */
   phone: string;
-  /** Shipping address street and number */
   address: string;
-  /** City or locality name */
   city: string;
-  /** Postal or ZIP code */
   postalCode: string;
-  /** Email address, if available */
   email: string | null;
 }
 
-/**
- * Additional metadata for the order, primarily derived from shipment tickets.
- */
-export interface OrderMetadata {
-  /** Whether the shipment involves reverse logistics (e.g. returns) */
+export interface ShipmentMetadata {
   inverseLogistics?: boolean;
-  /** Declared weight of the package in Kg */
-  declaredWeight?: number | null;
-  /** Declared value of the package for insurance/shipping purposes */
+  declaredWeight?: number;
   declaredValue?: number;
-  /** Tracking number from the shipping provider */
   trackingNumber: string;
   /** Total amount to be collected upon delivery, if applicable */
   totalToCollect?: number;
-  /** Additional notes or observations from the shipment ticket */
-  shipmentNotes?: string | null;
+  /** Change amount */
+  change?: number;
+  shipmentNotes?: string;
 }
 
-/**
- * Represents an individual item within an order.
- */
 export interface OrderItem {
-  /** The product being ordered */
-  product: Product;
-  /** Quantity of the product */
+  productId: Product["codigo"];
   quantity: number;
 }
+export type PaymentMethod = keyof Product["precios"];
 
-/**
- * Main Order entity representing a purchase.
- */
 export interface Order {
-  /** Unique identifier for the order */
   id: string;
-  /** Date when the order was created/sold */
   createdAt: Date;
-  /** List of items included in the order */
   items: OrderItem[];
-  /** Payment method used (e.g. "Credit Card", "Cash") */
-  paymentMethod: string;
-  /** Customer information associated with the order */
+  paymentMethod: PaymentMethod;
+  paymentStatus: "PAID" | "PENDING" | "FAILED";
+  paymentDate: Date;
+  wasShipped: boolean;
+  shipmentDate: Date;
+  invoice: {
+    status: "PENDING" | "IN_PROGRESS" | "COMPLETED" | "ERROR";
+    id?: number;
+  };
   customer: Customer;
-  /** Extended metadata for shipping and logistics */
-  metadata: OrderMetadata;
-  /** General observations or notes about the order */
+  shipmentMetadata: ShipmentMetadata;
   observations: string | null;
 }
-
-export type PaymentMethod = keyof Product["precios"];

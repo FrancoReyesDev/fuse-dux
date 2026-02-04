@@ -4,7 +4,6 @@ import {
   SidebarContent,
   SidebarFooter,
   SidebarGroup,
-  SidebarGroupAction,
   SidebarGroupContent,
   SidebarGroupLabel,
   SidebarHeader,
@@ -15,9 +14,9 @@ import {
 } from "./ui/sidebar";
 import { Plus, GalleryVerticalEnd, Settings, Calculator } from "lucide-react";
 import { Link } from "react-router";
-import { Avatar, AvatarFallback, AvatarImage } from "./ui/avatar";
+import { Avatar, AvatarImage } from "./ui/avatar";
 import { avatarDataUriFromUuid } from "~/lib/avatar-data-uri-from-uuid";
-import { NewOrderDialog } from "./new-order-dialog";
+import { OrderDialog } from "./order-dialog";
 import type { ConfigConstants } from "~/types/config-constants";
 import { useMemo, useState } from "react";
 import { CustomProductDialog } from "./custom-product-dialog";
@@ -62,12 +61,12 @@ export function AppSidebar({ orders, config }: Props) {
           <SidebarGroupContent>
             <SidebarMenu>
               <SidebarMenuItem>
-                <NewOrderDialog>
+                <OrderDialog>
                   <SidebarMenuButton>
                     <Plus className="size-4" />
                     <span>Nuevo Pedido</span>
                   </SidebarMenuButton>
-                </NewOrderDialog>
+                </OrderDialog>
               </SidebarMenuItem>
               {orders.map((order) => (
                 <SidebarMenuItem key={order.id}>
