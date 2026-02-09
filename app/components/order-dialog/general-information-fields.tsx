@@ -1,236 +1,232 @@
-import { Truck } from "lucide-react";
-import type { ShipmentMetadata } from "~/types/order";
 import {
   Field,
+  FieldDescription,
   FieldGroup,
   FieldLabel,
   FieldLegend,
+  FieldSeparator,
   FieldSet,
 } from "../ui/field";
 import { Input } from "../ui/input";
+import type { Customer, PaymentMethod } from "~/types/order";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "../ui/select";
+import { Switch } from "../ui/switch";
+import { Textarea } from "../ui/textarea";
+import { Badge } from "../ui/badge";
+import { format } from "date-fns";
+import { es } from "date-fns/locale";
 
-import { User } from "lucide-react";
-import type { Customer } from "~/types/order";
-
-interface CustomerFieldsProps {
+interface Props {
   customer: Customer;
+  responsibleName: string;
+  paymentMethod: PaymentMethod;
+  paymentStatus: "PAID" | "PENDING";
+  wasShipped: boolean;
+  shipmentDate: Date | null;
+  invoiceStatus: string;
+  observations: string | null;
   onCustomerChange: (customer: Customer) => void;
+  onResponsibleNameChange: (name: string) => void;
+  onPaymentMethodChange: (method: PaymentMethod) => void;
+  onPaymentStatusChange: (status: "PAID" | "PENDING") => void;
+  onObservationsChange: (observations: string) => void;
 }
-
-function CustomerFields({ customer, onCustomerChange }: CustomerFieldsProps) {
-  const handleChange = (field: keyof Customer, value: string) => {
-    onCustomerChange({ ...customer, [field]: value });
-  };
-
-  return (
-    <FieldSet className="bg-muted/30 p-4 rounded-lg border">
-      <div className="flex items-center gap-2 mb-4 text-primary">
-        <User className="size-5" />
-        <FieldLegend className="text-lg font-semibold">
-          Datos del Cliente
-        </FieldLegend>
-      </div>
-
-      <FieldGroup className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-        <Field>
-          <FieldLabel htmlFor="customer-name">Nombre Completo</FieldLabel>
-          <Input
-            id="customer-name"
-            placeholder="Nombre del cliente"
-            value={customer.name}
-            onChange={(e) => handleChange("name", e.target.value)}
-          />
-        </Field>
-        <Field>
-          <FieldLabel htmlFor="customer-phone">Teléfono</FieldLabel>
-          <Input
-            id="customer-phone"
-            placeholder="+54 ..."
-            value={customer.phone}
-            onChange={(e) => handleChange("phone", e.target.value)}
-          />
-        </Field>
-        <Field>
-          <FieldLabel htmlFor="customer-email">Email</FieldLabel>
-          <Input
-            id="customer-email"
-            placeholder="email@ejemplo.com"
-            value={customer.email || ""}
-            onChange={(e) => handleChange("email", e.target.value)}
-          />
-        </Field>
-        <Field>
-          <FieldLabel htmlFor="customer-address">Dirección</FieldLabel>
-          <Input
-            id="customer-address"
-            placeholder="Calle y altura"
-            value={customer.address}
-            onChange={(e) => handleChange("address", e.target.value)}
-          />
-        </Field>
-        <Field>
-          <FieldLabel htmlFor="customer-city">Ciudad</FieldLabel>
-          <Input
-            id="customer-city"
-            placeholder="Localidad"
-            value={customer.city}
-            onChange={(e) => handleChange("city", e.target.value)}
-          />
-        </Field>
-        <Field>
-          <FieldLabel htmlFor="customer-postal">Código Postal</FieldLabel>
-          <Input
-            id="customer-postal"
-            placeholder="CPA"
-            value={customer.postalCode}
-            onChange={(e) => handleChange("postalCode", e.target.value)}
-          />
-        </Field>
-      </FieldGroup>
-    </FieldSet>
-  );
-}
-
-interface MetadataFieldsProps {
-  metadata: ShipmentMetadata;
-  paymentMethod: string;
-  onMetadataChange: (metadata: ShipmentMetadata) => void;
-  onPaymentMethodChange: (method: string) => void;
-}
-
-function MetadataFields({
-  metadata,
-  paymentMethod,
-  onMetadataChange,
-  onPaymentMethodChange,
-}: MetadataFieldsProps) {
-  const handleChange = (field: keyof ShipmentMetadata, value: any) => {
-    onMetadataChange({ ...metadata, [field]: value });
-  };
-
-  return (
-    <FieldSet className="bg-muted/30 p-4 rounded-lg border">
-      <div className="flex items-center gap-2 mb-4 text-primary">
-        <Truck className="size-5" />
-        <FieldLegend className="text-lg font-semibold">
-          Logística y Metadatos
-        </FieldLegend>
-      </div>
-
-      <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
-        <FieldGroup className="lg:col-span-3 grid grid-cols-1 md:grid-cols-3 gap-4">
-          <Field>
-            <FieldLabel htmlFor="tracking">Tracking Number</FieldLabel>
-            <Input
-              id="tracking"
-              value={metadata.trackingNumber}
-              onChange={(e) => handleChange("trackingNumber", e.target.value)}
-              placeholder="Ej: AA123456789"
-            />
-          </Field>
-          <Field>
-            <FieldLabel htmlFor="weight">Peso Declarado (Kg)</FieldLabel>
-            <Input
-              id="weight"
-              type="number"
-              step="0.1"
-              value={metadata.declaredWeight || ""}
-              onChange={(e) =>
-                handleChange("declaredWeight", Number(e.target.value))
-              }
-            />
-          </Field>
-          <Field>
-            <FieldLabel htmlFor="value">Valor Declarado ($)</FieldLabel>
-            <Input
-              id="value"
-              type="number"
-              step="0.01"
-              value={metadata.declaredValue || ""}
-              onChange={(e) =>
-                handleChange("declaredValue", Number(e.target.value))
-              }
-            />
-          </Field>
-          <Field>
-            <FieldLabel htmlFor="collect">Total a Cobrar ($)</FieldLabel>
-            <Input
-              id="collect"
-              type="number"
-              step="0.01"
-              value={metadata.totalToCollect || ""}
-              onChange={(e) =>
-                handleChange("totalToCollect", Number(e.target.value))
-              }
-            />
-          </Field>
-          <Field className="md:col-span-2">
-            <FieldLabel htmlFor="notes">Notas de Envío</FieldLabel>
-            <Input
-              id="notes"
-              value={metadata.shipmentNotes || ""}
-              onChange={(e) => handleChange("shipmentNotes", e.target.value)}
-              placeholder="Instrucciones para el correo..."
-            />
-          </Field>
-        </FieldGroup>
-
-        <div className="flex flex-col gap-4 justify-center border-l pl-6">
-          <Field
-            orientation="horizontal"
-            className="p-3 border rounded-md bg-background hover:bg-muted/50 transition-colors"
-          >
-            <input
-              id="inverse"
-              type="checkbox"
-              className="h-5 w-5 rounded border-primary text-primary focus:ring-primary mr-3"
-              checked={metadata.inverseLogistics}
-              onChange={(e) =>
-                handleChange("inverseLogistics", e.target.checked)
-              }
-            />
-            <FieldLabel
-              htmlFor="inverse"
-              className="font-medium cursor-pointer"
-            >
-              Logística Inversa
-            </FieldLabel>
-          </Field>
-
-          <Field>
-            <FieldLabel htmlFor="payment">Método de Pago</FieldLabel>
-            <Input
-              id="payment"
-              value={paymentMethod}
-              onChange={(e) => onPaymentMethodChange(e.target.value)}
-              placeholder="Ej: Transferencia"
-            />
-          </Field>
-        </div>
-      </div>
-    </FieldSet>
-  );
-}
-
-interface Props extends CustomerFieldsProps, MetadataFieldsProps {}
 
 export function GeneralInformationFields({
   customer,
-  metadata,
+  responsibleName,
   paymentMethod,
+  paymentStatus,
+  wasShipped,
+  shipmentDate,
+  invoiceStatus,
+  observations,
   onCustomerChange,
-  onMetadataChange,
+  onResponsibleNameChange,
   onPaymentMethodChange,
+  onPaymentStatusChange,
+  onObservationsChange,
 }: Props) {
+  const handleChange =
+    (field: keyof Customer) => (e: React.ChangeEvent<HTMLInputElement>) => {
+      onCustomerChange({ ...customer, [field]: e.target.value });
+    };
+
   return (
-    <div className="flex flex-col gap-4">
-      <CustomerFields customer={customer} onCustomerChange={onCustomerChange} />
-      <MetadataFields
-        metadata={metadata}
-        paymentMethod={paymentMethod}
-        onMetadataChange={onMetadataChange}
-        onPaymentMethodChange={onPaymentMethodChange}
-      />
-    </div>
+    <FieldGroup>
+      <FieldSet>
+        <FieldLegend>Responsable de la Orden</FieldLegend>
+        <FieldDescription>
+          Información de la persona que toma la orden
+        </FieldDescription>
+        <FieldGroup>
+          <Field>
+            <FieldLabel htmlFor="responsible">
+              Nombre del Responsable
+            </FieldLabel>
+            <Input
+              id="responsible"
+              placeholder="Quién toma la orden"
+              className="w-full max-w-md"
+              value={responsibleName}
+              onChange={(e) => onResponsibleNameChange(e.target.value)}
+            />
+          </Field>
+        </FieldGroup>
+      </FieldSet>
+      <FieldSeparator />
+      <FieldSet>
+        <FieldLegend>Datos del Cliente</FieldLegend>
+        <FieldDescription>Información del cliente</FieldDescription>
+        <FieldGroup className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          <Field>
+            <FieldLabel htmlFor="customer-name">Nombre Completo</FieldLabel>
+            <Input
+              id="customer-name"
+              placeholder="Nombre del cliente"
+              value={customer.name}
+              onChange={handleChange("name")}
+            />
+          </Field>
+          <Field>
+            <FieldLabel htmlFor="customer-phone">Teléfono</FieldLabel>
+            <Input
+              id="customer-phone"
+              placeholder="+54 ..."
+              value={customer.phone}
+              onChange={handleChange("phone")}
+            />
+          </Field>
+          <Field>
+            <FieldLabel htmlFor="customer-email">Email</FieldLabel>
+            <Input
+              id="customer-email"
+              placeholder="email@ejemplo.com"
+              value={customer.email || ""}
+              onChange={handleChange("email")}
+            />
+          </Field>
+          <Field>
+            <FieldLabel htmlFor="customer-address">Dirección</FieldLabel>
+            <Input
+              id="customer-address"
+              placeholder="Calle y altura"
+              value={customer.address}
+              onChange={handleChange("address")}
+            />
+          </Field>
+          <Field>
+            <FieldLabel htmlFor="customer-city">Ciudad</FieldLabel>
+            <Input
+              id="customer-city"
+              placeholder="Localidad"
+              value={customer.city}
+              onChange={handleChange("city")}
+            />
+          </Field>
+          <Field>
+            <FieldLabel htmlFor="customer-postal">Código Postal</FieldLabel>
+            <Input
+              id="customer-postal"
+              placeholder="CPA"
+              value={customer.postalCode}
+              onChange={handleChange("postalCode")}
+            />
+          </Field>
+        </FieldGroup>
+      </FieldSet>
+      <FieldSeparator />
+      <FieldSet>
+        <FieldLegend>Estado de la Orden</FieldLegend>
+        <FieldGroup className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <Field>
+            <FieldLabel>Método de Pago</FieldLabel>
+            <Select
+              value={paymentMethod}
+              onValueChange={(value) =>
+                onPaymentMethodChange(value as PaymentMethod)
+              }
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="Seleccionar método" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="efTrans">
+                  Efectivo / Transferencia
+                </SelectItem>
+                <SelectItem value="credDebQr">Crédito / Débito / QR</SelectItem>
+                <SelectItem value="credito3Pagos">Crédito 3 Pagos</SelectItem>
+                <SelectItem value="credito6Cuotas">Crédito 6 Cuotas</SelectItem>
+                <SelectItem value="hotSale">Hot Sale</SelectItem>
+                <SelectItem value="mayorista">Mayorista</SelectItem>
+                <SelectItem value="meli">Mercado Libre</SelectItem>
+              </SelectContent>
+            </Select>
+          </Field>
+
+          <Field>
+            <FieldLabel>Estado del Pago</FieldLabel>
+            <div className="flex items-center space-x-2 mt-2">
+              <Switch
+                id="payment-status"
+                checked={paymentStatus === "PAID"}
+                onCheckedChange={(checked) =>
+                  onPaymentStatusChange(checked ? "PAID" : "PENDING")
+                }
+              />
+              <span
+                className={
+                  paymentStatus === "PAID"
+                    ? "font-medium text-green-600"
+                    : "text-muted-foreground"
+                }
+              >
+                {paymentStatus === "PAID" ? "PAGADO" : "PENDIENTE"}
+              </span>
+            </div>
+          </Field>
+
+          <Field>
+            <FieldLabel>Estado de Envío</FieldLabel>
+            <div className="mt-2 flex items-center gap-2">
+              <Badge variant={wasShipped ? "default" : "secondary"}>
+                {wasShipped ? "ENVIADO" : "PENDIENTE DE ENVÍO"}
+              </Badge>
+              {wasShipped && shipmentDate && (
+                <span className="text-sm text-muted-foreground">
+                  el {format(shipmentDate, "dd/MM/yyyy", { locale: es })}
+                </span>
+              )}
+            </div>
+          </Field>
+
+          <Field>
+            <FieldLabel>Facturación</FieldLabel>
+            <div className="mt-2">
+              <Badge variant="outline">{invoiceStatus}</Badge>
+            </div>
+          </Field>
+
+          <Field className="md:col-span-2">
+            <FieldLabel htmlFor="observations">Observaciones</FieldLabel>
+            <Textarea
+              id="observations"
+              placeholder="Notas internas sobre la orden..."
+              value={observations || ""}
+              onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) =>
+                onObservationsChange(e.target.value)
+              }
+              className="resize-none h-24"
+            />
+          </Field>
+        </FieldGroup>
+      </FieldSet>
+    </FieldGroup>
   );
 }

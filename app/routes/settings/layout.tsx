@@ -19,7 +19,11 @@ export default function SettingsLayout() {
           size="sm"
           className="h-8 px-2 -ml-2 text-muted-foreground hover:text-foreground"
         >
-          <Link to="/" className="flex items-center gap-2 font-normal">
+          <Link
+            to="/"
+            reloadDocument
+            className="flex items-center gap-2 font-normal"
+          >
             <ArrowLeft className="h-4 w-4" />
             <span>Volver al inicio</span>
           </Link>

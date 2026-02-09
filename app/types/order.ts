@@ -22,7 +22,7 @@ export interface ShipmentMetadata {
 }
 
 export interface OrderItem {
-  productId: Product["codigo"];
+  product: Product;
   quantity: number;
 }
 export type PaymentMethod = keyof Product["precios"];
@@ -32,15 +32,17 @@ export interface Order {
   createdAt: Date;
   items: OrderItem[];
   paymentMethod: PaymentMethod;
-  paymentStatus: "PAID" | "PENDING" | "FAILED";
-  paymentDate: Date;
+  paymentStatus: "PAID" | "PENDING";
+  // paymentDate: Date | null;
   wasShipped: boolean;
-  shipmentDate: Date;
+  shipmentDate: Date | null;
   invoice: {
     status: "PENDING" | "IN_PROGRESS" | "COMPLETED" | "ERROR";
     id?: number;
   };
   customer: Customer;
-  shipmentMetadata: ShipmentMetadata;
+  responsibleName: string;
+  // shipmentMetadata: ShipmentMetadata;
+  shipmentMetadata: Record<string, string | number>;
   observations: string | null;
 }

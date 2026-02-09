@@ -5,7 +5,11 @@ import {
   Field,
   FieldContent,
   FieldDescription,
+  FieldGroup,
   FieldLabel,
+  FieldLegend,
+  FieldSeparator,
+  FieldSet,
 } from "~/components/ui/field";
 import { Spinner } from "~/components/ui/spinner";
 import {
@@ -17,12 +21,16 @@ import {
   CardTitle,
 } from "~/components/ui/card";
 import type { Route } from "./+types/config";
-import type { ConfigConstants } from "~/types/config-constants";
+import type {
+  ConfigConstants,
+  DuxBillingTemplate,
+} from "~/types/config-constants";
 import { Effect, pipe } from "effect";
 import { stringToFloat } from "~/utils/string-to-float";
 import { CONFIG_CONSTANTS_KEY } from "~/constants";
 import { getConfigFromKv } from "~/lib/get-config-from-kv";
 import { useState, type ChangeEvent } from "react";
+import { ScrollArea } from "~/components/ui/scroll-area";
 
 export async function action({ request, context }: Route.ActionArgs) {
   const formData = await request.formData();
@@ -49,10 +57,15 @@ export async function action({ request, context }: Route.ActionArgs) {
       factorTarjeta3.toString(),
     );
 
+    const existingConfig = yield* getConfigFromKv(kv).pipe(Effect.either);
+    const duxTemplates =
+      existingConfig._tag === "Right" ? existingConfig.right.duxTemplates : [];
+
     return {
       profitFactorOptions,
       creditCardFactor,
       threeInstallmentsFactor,
+      duxTemplates,
     } satisfies ConfigConstants;
   }).pipe(
     Effect.flatMap((config) => Effect.try(() => JSON.stringify(config))),
@@ -92,7 +105,12 @@ export async function loader({ context }: Route.LoaderArgs) {
   return program;
 }
 
-type ConfigState = Record<keyof ConfigConstants, string | number>;
+type ConfigState = {
+  profitFactorOptions: string;
+  creditCardFactor: string | number;
+  threeInstallmentsFactor: string | number;
+  duxTemplates: DuxBillingTemplate[];
+};
 
 export default function Config({ loaderData }: Route.ComponentProps) {
   const { config } = loaderData;
@@ -100,6 +118,7 @@ export default function Config({ loaderData }: Route.ComponentProps) {
     profitFactorOptions: config?.profitFactorOptions.join(", ") || "",
     creditCardFactor: config?.creditCardFactor || "",
     threeInstallmentsFactor: config?.threeInstallmentsFactor || "",
+    duxTemplates: config?.duxTemplates || [],
   });
   const fetcher = useFetcher<typeof action>();
   const isSavingConfig = fetcher.state === "submitting";
@@ -118,58 +137,92 @@ export default function Config({ loaderData }: Route.ComponentProps) {
         </CardDescription>
       </CardHeader>
       <CardContent>
-        <fetcher.Form id="config-form" method="post" className="space-y-6">
-          <Field>
-            <FieldLabel htmlFor="ganancia">Factores de Ganancia</FieldLabel>
-            <FieldContent>
-              <Input
-                id="ganancia"
-                name="ganancia"
-                placeholder="1.3, 1.5, 1.8"
-                value={configState.profitFactorOptions}
-                onChange={handleConfigChange("profitFactorOptions")}
-              />
-              <FieldDescription>
-                Ingresa los factores separados por comas para usarlos en el
-                calculador.
-              </FieldDescription>
-            </FieldContent>
-          </Field>
+        <ScrollArea className="h-[60vh]">
+          <fetcher.Form id="config-form" method="post" className="space-y-6">
+            <FieldGroup>
+              <FieldSet>
+                <FieldLegend>Factores para calculador</FieldLegend>
+                <FieldDescription>
+                  Ingresa los factores de tarjeta y los factores de ganancia
+                  separados por comas para usarlos en el calculador.
+                </FieldDescription>
+                <FieldGroup className="grid grid-cols-3 gap-4">
+                  <Field>
+                    <FieldLabel htmlFor="ganancia">
+                      Factores de Ganancia
+                    </FieldLabel>
+                    <FieldContent>
+                      <Input
+                        id="ganancia"
+                        name="ganancia"
+                        placeholder="1.3, 1.5, 1.8"
+                        value={configState.profitFactorOptions}
+                        onChange={handleConfigChange("profitFactorOptions")}
+                      />
+                    </FieldContent>
+                  </Field>
 
-          <Field>
-            <FieldLabel htmlFor="factor_tarjeta_1">
-              Factor Tarjeta (1 Pago)
-            </FieldLabel>
-            <FieldContent>
-              <Input
-                id="factor_tarjeta_1"
-                name="factor_tarjeta_1"
-                type="number"
-                step="0.01"
-                placeholder="1.6"
-                value={configState.creditCardFactor}
-                onChange={handleConfigChange("creditCardFactor")}
-              />
-            </FieldContent>
-          </Field>
+                  <Field>
+                    <FieldLabel htmlFor="factor_tarjeta_1">
+                      Factor Tarjeta (1 Pago)
+                    </FieldLabel>
+                    <FieldContent>
+                      <Input
+                        id="factor_tarjeta_1"
+                        name="factor_tarjeta_1"
+                        type="number"
+                        step="0.01"
+                        placeholder="1.6"
+                        value={configState.creditCardFactor}
+                        onChange={handleConfigChange("creditCardFactor")}
+                      />
+                    </FieldContent>
+                  </Field>
 
-          <Field>
-            <FieldLabel htmlFor="factor_tarjeta_3">
-              Factor Tarjeta (3 Pagos)
-            </FieldLabel>
-            <FieldContent>
-              <Input
-                id="factor_tarjeta_3"
-                name="factor_tarjeta_3"
-                type="number"
-                step="0.01"
-                placeholder="1.8"
-                value={configState.threeInstallmentsFactor}
-                onChange={handleConfigChange("threeInstallmentsFactor")}
-              />
-            </FieldContent>
-          </Field>
-        </fetcher.Form>
+                  <Field>
+                    <FieldLabel htmlFor="factor_tarjeta_3">
+                      Factor Tarjeta (3 Pagos)
+                    </FieldLabel>
+                    <FieldContent>
+                      <Input
+                        id="factor_tarjeta_3"
+                        name="factor_tarjeta_3"
+                        type="number"
+                        step="0.01"
+                        placeholder="1.8"
+                        value={configState.threeInstallmentsFactor}
+                        onChange={handleConfigChange("threeInstallmentsFactor")}
+                      />
+                    </FieldContent>
+                  </Field>
+                </FieldGroup>
+              </FieldSet>
+              <FieldSeparator />
+              <FieldSet>
+                <FieldLegend>Metadatos logistica</FieldLegend>
+                <FieldDescription>
+                  Ingresa los datos que se exportaran a la logistica.
+                </FieldDescription>
+                <FieldGroup className="grid grid-cols-3 gap-4">
+                  <Field>
+                    <FieldLabel htmlFor="metadata">
+                      Dato separado por coma (seran los nombres de las columnas)
+                    </FieldLabel>
+                    <FieldContent>
+                      <Input
+                        id="metadata"
+                        name="metadata"
+                        placeholder="1.3, 1.5, 1.8"
+                        value={configState.profitFactorOptions}
+                        onChange={handleConfigChange("profitFactorOptions")}
+                      />
+                    </FieldContent>
+                  </Field>
+                </FieldGroup>
+              </FieldSet>
+            </FieldGroup>
+          </fetcher.Form>
+        </ScrollArea>
       </CardContent>
       <CardFooter>
         <Button

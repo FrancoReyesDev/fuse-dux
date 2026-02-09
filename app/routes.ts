@@ -7,7 +7,11 @@ import {
 } from "@react-router/dev/routes";
 
 export default [
-  route("/", "routes/home.tsx"),
+  layout("routes/home.tsx", [
+    index("routes/search.tsx"),
+    route("orders", "routes/orders/orders.tsx"),
+    route("orders/:id", "routes/orders/byId.tsx"),
+  ]),
   ...prefix("settings", [
     layout("routes/settings/layout.tsx", [
       index("routes/settings/upload.tsx"),

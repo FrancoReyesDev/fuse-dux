@@ -7,15 +7,13 @@ import {
   TableRow,
 } from "~/components/ui/table";
 import { Button } from "~/components/ui/button";
-import { Copy, Check } from "lucide-react";
+import { Copy, Check, Plus } from "lucide-react";
 import type { Product } from "~/types/product";
 import type { FuseResult } from "fuse.js";
 import { genCopyText } from "~/lib/gen-copy-text";
 import { useState } from "react";
-
-interface ProductsTableProps {
-  results: FuseResult<Product>[];
-}
+import { useOrder } from "~/hooks/use-order";
+import { Input } from "./ui/input";
 
 function CopyButton({ product }: { product: Product }) {
   const [copied, setCopied] = useState(false);
@@ -54,7 +52,39 @@ function CopyButton({ product }: { product: Product }) {
   );
 }
 
+interface InputQuantityProps {
+  quantity: number;
+  updateQuantity: (quantity: number) => void;
+}
+
+const InputQuantity = ({ quantity, updateQuantity }: InputQuantityProps) => {
+  return (
+    <Input
+      type="number"
+      className="max-w-12.5"
+      value={quantity}
+      onChange={(e) => {
+        const value = Number(e.target.value);
+        updateQuantity(value);
+      }}
+    />
+  );
+};
+
+interface ProductsTableProps {
+  results: FuseResult<Product>[];
+}
+
 export function ProductsTable({ results }: ProductsTableProps) {
+  const { upsertItem, order } = useOrder();
+
+  const getQuantity = (product: Product) => {
+    return (
+      order.items.find((item) => item.product.codigo === product.codigo)
+        ?.quantity || 0
+    );
+  };
+
   return (
     <div className="rounded-md border w-full p-2">
       <Table>
@@ -67,13 +97,19 @@ export function ProductsTable({ results }: ProductsTableProps) {
             <TableHead className="text-right">Ef/Trans</TableHead>
             <TableHead className="text-right">Cred/Deb/QR</TableHead>
             <TableHead className="text-right">3 Pagos</TableHead>
+            {order.id !== "" && (
+              <TableHead className="text-right">En orden</TableHead>
+            )}
             <TableHead className="w-12.5"></TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
           {results.length === 0 ? (
             <TableRow>
-              <TableCell colSpan={8} className="h-24 text-center">
+              <TableCell
+                colSpan={order.id !== "" ? 9 : 8}
+                className="h-24 text-center"
+              >
                 Sin resultados.
               </TableCell>
             </TableRow>
@@ -93,6 +129,17 @@ export function ProductsTable({ results }: ProductsTableProps) {
                 <TableCell className="text-right">
                   {item.precios.credito3Pagos}
                 </TableCell>
+
+                {order.id !== "" && (
+                  <TableCell className="flex items-center justify-center">
+                    <InputQuantity
+                      quantity={getQuantity(item)}
+                      updateQuantity={(quantity) => {
+                        upsertItem({ product: item, quantity });
+                      }}
+                    />
+                  </TableCell>
+                )}
                 <TableCell>
                   <CopyButton product={item} />
                 </TableCell>

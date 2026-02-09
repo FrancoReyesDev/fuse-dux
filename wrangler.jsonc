@@ -3,51 +3,60 @@
  * https://developers.cloudflare.com/workers/wrangler/configuration/
  */
 {
-  "$schema": "node_modules/wrangler/config-schema.json",
-  "name": "fuse-dux",
-  "compatibility_date": "2025-04-04",
-  "main": "./workers/app.ts",
-  "vars": {
-    "VALUE_FROM_CLOUDFLARE": "Hello from Cloudflare",
-  },
-  "observability": {
-    "enabled": true,
-  },
-  /**
+	"$schema": "node_modules/wrangler/config-schema.json",
+	"name": "fuse-dux",
+	"compatibility_date": "2025-04-04",
+	"main": "./workers/app.ts",
+	"vars": {
+		"VALUE_FROM_CLOUDFLARE": "Hello from Cloudflare",
+	},
+	"observability": {
+		"enabled": true,
+	},
+	/**
    * Smart Placement
    * https://developers.cloudflare.com/workers/configuration/smart-placement/#smart-placement
    */
-  // "placement": {  "mode": "smart" }
-  /**
+	// "placement": {  "mode": "smart" }
+	/**
    * Bindings
    * Bindings allow your Worker to interact with resources on the Cloudflare Developer Platform, including
    * databases, object storage, AI inference, real-time communication and more.
    * https://developers.cloudflare.com/workers/runtime-apis/bindings/
    */
-  /**
+	/**
    * Static Assets
    * https://developers.cloudflare.com/workers/static-assets/binding/
    */
-  "assets": {
-    "directory": "./public/",
-    "binding": "ASSETS",
-  },
-  "r2_buckets": [
-    {
-      "bucket_name": "fuse-dux",
-      "binding": "fuse_dux_bucket",
-      "remote": true,
-    },
-  ],
-  "kv_namespaces": [
-    {
-      "binding": "fuse_dux_kv",
-      "id": "0e56246939254dc2bae13e440fee13e6",
-    },
-  ],
-  /**
+	"assets": {
+		"directory": "./public/",
+		"binding": "ASSETS",
+	},
+	"r2_buckets": [
+		{
+			"bucket_name": "fuse-dux",
+			"binding": "fuse_dux_bucket",
+			"remote": true,
+		},
+	],
+	"kv_namespaces": [
+		{
+			"binding": "fuse_dux_kv",
+			"id": "0e56246939254dc2bae13e440fee13e6",
+			"remote": true,
+		},
+	],
+	"d1_databases": [
+		{
+			"binding": "fuse_dux_d1",
+			"database_name": "fuse-dux",
+			"database_id": "235fed0f-46a0-4493-9d95-363ec102fad8",
+			"remote": true
+		}
+	],
+	/**
    * Service Bindings (communicate between multiple Workers)
    * https://developers.cloudflare.com/workers/wrangler/configuration/#service-bindings
    */
-  // "services": [  {   "binding": "MY_SERVICE",   "service": "my-service"  } ]
+	// "services": [  {   "binding": "MY_SERVICE",   "service": "my-service"  } ]
 }

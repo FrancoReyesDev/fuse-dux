@@ -8,36 +8,62 @@ import {
   SidebarGroupLabel,
   SidebarHeader,
   SidebarMenu,
+  SidebarMenuAction,
   SidebarMenuButton,
   SidebarMenuItem,
   SidebarRail,
 } from "./ui/sidebar";
-import { Plus, GalleryVerticalEnd, Settings, Calculator } from "lucide-react";
+import {
+  Plus,
+  GalleryVerticalEnd,
+  Settings,
+  Calculator,
+  Pencil,
+  ArrowUpRight,
+  ChevronRight,
+} from "lucide-react";
 import { Link } from "react-router";
 import { Avatar, AvatarImage } from "./ui/avatar";
 import { avatarDataUriFromUuid } from "~/lib/avatar-data-uri-from-uuid";
-import { OrderDialog } from "./order-dialog";
+import { OrderDialog } from "./order-dialog/order-dialog";
 import type { ConfigConstants } from "~/types/config-constants";
 import { useMemo, useState } from "react";
 import { CustomProductDialog } from "./custom-product-dialog";
+import { useOrder } from "~/hooks/use-order";
+import { Button } from "./ui/button";
 
 interface Props {
-  orders: Order[];
   config: ConfigConstants;
 }
 
-export function AppSidebar({ orders, config }: Props) {
+export function AppSidebar({ config }: Props) {
+  const { order, orders, setOrder, clearOrder } = useOrder();
+
+  const [openOrderDialog, setOpenOrderDialog] = useState<boolean>(false);
+
   const indexedOrders = useMemo(
     () => new Map(orders.map((order) => [order.id, order])),
     [orders],
   );
 
-  const [selectedOrder, setSelectedOrder] = useState<Order["id"] | undefined>(
-    indexedOrders.keys().next().value,
-  );
+  const handleSelectOrder = (id: Order["id"], openDialog: boolean = false) => {
+    const order = indexedOrders.get(id);
+    if (!order) return;
+    setOrder((prev) => {
+      if (prev.id === order.id) return prev;
+      return order;
+    });
+    if (openDialog) setOpenOrderDialog(true);
+  };
+
+  const handleCreateOrder = () => {
+    clearOrder();
+    setOpenOrderDialog(true);
+  };
 
   return (
     <Sidebar collapsible="icon" variant="floating">
+      <OrderDialog open={openOrderDialog} setOpen={setOpenOrderDialog} />
       <SidebarHeader>
         <SidebarMenu>
           <SidebarMenuItem>
@@ -57,40 +83,41 @@ export function AppSidebar({ orders, config }: Props) {
       </SidebarHeader>
       <SidebarContent>
         <SidebarGroup>
-          <SidebarGroupLabel>Pedidos Recientes</SidebarGroupLabel>
+          <SidebarGroupLabel>Pedidos</SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
               <SidebarMenuItem>
-                <OrderDialog>
-                  <SidebarMenuButton>
-                    <Plus className="size-4" />
-                    <span>Nuevo Pedido</span>
-                  </SidebarMenuButton>
-                </OrderDialog>
+                <SidebarMenuButton onClick={handleCreateOrder}>
+                  <Plus className="size-4" />
+                  <span>Nuevo Pedido</span>
+                </SidebarMenuButton>
               </SidebarMenuItem>
-              {orders.map((order) => (
-                <SidebarMenuItem key={order.id}>
+              {orders.map(({ id, customer }) => (
+                <SidebarMenuItem key={id} className="flex flex-row">
                   <SidebarMenuButton
                     size="lg"
-                    tooltip={order.customer.name}
-                    isActive={order.id === selectedOrder}
-                    onClick={() => setSelectedOrder(order.id)}
+                    tooltip={customer.name}
+                    isActive={id === order?.id}
+                    onClick={() => handleSelectOrder(id, true)}
                   >
                     <Avatar className="h-8 w-8 rounded-lg">
                       <AvatarImage
-                        src={avatarDataUriFromUuid(order.id.toString())}
-                        alt={order.customer.name}
+                        src={avatarDataUriFromUuid(id.toString())}
+                        alt={customer.name}
                       />
                     </Avatar>
                     <div className="grid flex-1 text-left text-sm leading-tight">
                       <span className="truncate font-medium">
-                        {order.customer.name}
+                        {customer.name}
                       </span>
                       <span className="truncate text-xs text-muted-foreground">
-                        {order.customer.address}
+                        {customer.address}
                       </span>
                     </div>
                   </SidebarMenuButton>
+                  <SidebarMenuAction onClick={() => handleSelectOrder(id)}>
+                    <ChevronRight className="size-4" />
+                  </SidebarMenuAction>
                 </SidebarMenuItem>
               ))}
             </SidebarMenu>
