@@ -16,10 +16,18 @@ export interface DuxBillingTemplate {
   tipo_comp: TipoCompCrear;
 }
 
+export interface LogisticsMetadataTemplate {
+  name: string;
+  fields: string[];
+  headers: string[];
+}
+
 export interface ConfigConstants {
   profitFactorOptions: number[];
   creditCardFactor: number;
   threeInstallmentsFactor: number;
   // Dux Billing Templates
   duxTemplates: DuxBillingTemplate[];
+  // Logistics Metadata Templates
+  logisticsTemplates: LogisticsMetadataTemplate[];
 }

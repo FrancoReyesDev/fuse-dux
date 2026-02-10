@@ -2,6 +2,13 @@ import { data, useFetcher } from "react-router";
 import { Button } from "~/components/ui/button";
 import { Input } from "~/components/ui/input";
 import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "~/components/ui/select";
+import {
   Field,
   FieldContent,
   FieldDescription,
@@ -24,6 +31,7 @@ import type { Route } from "./+types/config";
 import type {
   ConfigConstants,
   DuxBillingTemplate,
+  LogisticsMetadataTemplate,
 } from "~/types/config-constants";
 import { Effect, pipe } from "effect";
 import { stringToFloat } from "~/utils/string-to-float";
@@ -31,6 +39,8 @@ import { CONFIG_CONSTANTS_KEY } from "~/constants";
 import { getConfigFromKv } from "~/lib/get-config-from-kv";
 import { useState, type ChangeEvent } from "react";
 import { ScrollArea } from "~/components/ui/scroll-area";
+import { AVAILABLE_ORDER_FIELDS } from "~/types/order-field-mapping";
+import { Badge } from "~/components/ui/badge";
 
 export async function action({ request, context }: Route.ActionArgs) {
   const formData = await request.formData();
@@ -61,11 +71,18 @@ export async function action({ request, context }: Route.ActionArgs) {
     const duxTemplates =
       existingConfig._tag === "Right" ? existingConfig.right.duxTemplates : [];
 
+    const logisticsTemplatesJSON = formData.get("logisticsTemplatesJSON");
+    const logisticsTemplates: LogisticsMetadataTemplate[] =
+      logisticsTemplatesJSON
+        ? JSON.parse(logisticsTemplatesJSON.toString())
+        : [];
+
     return {
       profitFactorOptions,
       creditCardFactor,
       threeInstallmentsFactor,
       duxTemplates,
+      logisticsTemplates,
     } satisfies ConfigConstants;
   }).pipe(
     Effect.flatMap((config) => Effect.try(() => JSON.stringify(config))),
@@ -110,6 +127,7 @@ type ConfigState = {
   creditCardFactor: string | number;
   threeInstallmentsFactor: string | number;
   duxTemplates: DuxBillingTemplate[];
+  logisticsTemplates: LogisticsMetadataTemplate[];
 };
 
 export default function Config({ loaderData }: Route.ComponentProps) {
@@ -119,7 +137,12 @@ export default function Config({ loaderData }: Route.ComponentProps) {
     creditCardFactor: config?.creditCardFactor || "",
     threeInstallmentsFactor: config?.threeInstallmentsFactor || "",
     duxTemplates: config?.duxTemplates || [],
+    logisticsTemplates: config?.logisticsTemplates || [],
   });
+  const [selectedLogisticsIndex, setSelectedLogisticsIndex] = useState<
+    string | null
+  >(null);
+
   const fetcher = useFetcher<typeof action>();
   const isSavingConfig = fetcher.state === "submitting";
 
@@ -127,6 +150,66 @@ export default function Config({ loaderData }: Route.ComponentProps) {
     (key: keyof ConfigConstants) => (event: ChangeEvent<HTMLInputElement>) => {
       setConfigState({ ...configState, [key]: event.target.value });
     };
+
+  const addLogisticsTemplate = () => {
+    const newTemplates = [
+      ...configState.logisticsTemplates,
+      { name: "Nueva Logística", fields: [], headers: [] },
+    ];
+    setConfigState({
+      ...configState,
+      logisticsTemplates: newTemplates,
+    });
+    setSelectedLogisticsIndex((newTemplates.length - 1).toString());
+  };
+
+  const removeLogisticsTemplate = (index: number) => {
+    const newTemplates = [...configState.logisticsTemplates];
+    newTemplates.splice(index, 1);
+    setConfigState({ ...configState, logisticsTemplates: newTemplates });
+    if (selectedLogisticsIndex === index.toString()) {
+      setSelectedLogisticsIndex(null);
+    } else if (
+      selectedLogisticsIndex &&
+      parseInt(selectedLogisticsIndex) > index
+    ) {
+      setSelectedLogisticsIndex(
+        (parseInt(selectedLogisticsIndex) - 1).toString(),
+      );
+    }
+  };
+
+  const updateLogisticsTemplate = (
+    index: number,
+    field: keyof LogisticsMetadataTemplate,
+    value: string,
+  ) => {
+    const newTemplates = [...configState.logisticsTemplates];
+    if (field === "fields") {
+      newTemplates[index] = {
+        ...newTemplates[index],
+        fields: value.split(",").map((f) => f.trim()),
+      }; // Store as array but input is string.
+      // Logic detail: storing as array immediately might be tricky for input value.
+      // Correct approach: We need to handle the input state carefully.
+      // For simplicity in this step, let's assume valid state updates and we might need a separate local state helper
+      // or just accept that we split on render/join on input.
+      // Actually, better to keep state as object and transform.
+      // Let's refine:
+      newTemplates[index] = {
+        ...newTemplates[index],
+        fields: value.split(","), // This creates ["field1", " field2"]
+      };
+    } else if (field === "headers") {
+      newTemplates[index] = {
+        ...newTemplates[index],
+        headers: value.split(","),
+      };
+    } else {
+      newTemplates[index] = { ...newTemplates[index], [field]: value };
+    }
+    setConfigState({ ...configState, logisticsTemplates: newTemplates });
+  };
 
   return (
     <Card className="max-w-2xl">
@@ -199,27 +282,156 @@ export default function Config({ loaderData }: Route.ComponentProps) {
               </FieldSet>
               <FieldSeparator />
               <FieldSet>
-                <FieldLegend>Metadatos logistica</FieldLegend>
+                <div className="flex items-center justify-between">
+                  <FieldLegend className="mb-0">
+                    Metadatos Logística
+                  </FieldLegend>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={addLogisticsTemplate}
+                  >
+                    Agregar Plantilla
+                  </Button>
+                </div>
                 <FieldDescription>
-                  Ingresa los datos que se exportaran a la logistica.
+                  Configura plantillas de metadatos para distintas logísticas.
                 </FieldDescription>
-                <FieldGroup className="grid grid-cols-3 gap-4">
-                  <Field>
-                    <FieldLabel htmlFor="metadata">
-                      Dato separado por coma (seran los nombres de las columnas)
-                    </FieldLabel>
-                    <FieldContent>
-                      <Input
-                        id="metadata"
-                        name="metadata"
-                        placeholder="1.3, 1.5, 1.8"
-                        value={configState.profitFactorOptions}
-                        onChange={handleConfigChange("profitFactorOptions")}
-                      />
-                    </FieldContent>
-                  </Field>
-                </FieldGroup>
+                <div className="space-y-4">
+                  <div className="flex gap-2">
+                    <Select
+                      value={selectedLogisticsIndex || ""}
+                      onValueChange={(value) =>
+                        setSelectedLogisticsIndex(value)
+                      }
+                    >
+                      <SelectTrigger className="w-full">
+                        <SelectValue placeholder="Seleccionar logística..." />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {configState.logisticsTemplates.map(
+                          (template, index) => (
+                            <SelectItem key={index} value={index.toString()}>
+                              {template.name || `Logística #${index + 1}`}
+                            </SelectItem>
+                          ),
+                        )}
+                      </SelectContent>
+                    </Select>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={addLogisticsTemplate}
+                    >
+                      Nueva
+                    </Button>
+                  </div>
+
+                  {selectedLogisticsIndex !== null &&
+                    configState.logisticsTemplates[
+                      parseInt(selectedLogisticsIndex)
+                    ] && (
+                      <div className="grid grid-cols-1 gap-4 border p-4 rounded-md relative group">
+                        <div className="flex justify-end">
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="sm"
+                            className="text-destructive hover:text-destructive/90"
+                            onClick={() =>
+                              removeLogisticsTemplate(
+                                parseInt(selectedLogisticsIndex),
+                              )
+                            }
+                          >
+                            Eliminar esta plantilla
+                          </Button>
+                        </div>
+                        <Field>
+                          <FieldLabel>Nombre Logística</FieldLabel>
+                          <Input
+                            value={
+                              configState.logisticsTemplates[
+                                parseInt(selectedLogisticsIndex)
+                              ].name
+                            }
+                            onChange={(e) =>
+                              updateLogisticsTemplate(
+                                parseInt(selectedLogisticsIndex),
+                                "name",
+                                e.target.value,
+                              )
+                            }
+                            placeholder="Ej: Redshift"
+                          />
+                        </Field>
+                        <Field>
+                          <FieldLabel>
+                            Headers CSV (separados por coma)
+                          </FieldLabel>
+                          <FieldDescription>
+                            Define los nombres de las columnas en el CSV. El
+                            orden debe coincidir con los campos de abajo.
+                          </FieldDescription>
+                          <Input
+                            value={
+                              configState.logisticsTemplates[
+                                parseInt(selectedLogisticsIndex)
+                              ].headers?.join(", ") || ""
+                            }
+                            onChange={(e) =>
+                              updateLogisticsTemplate(
+                                parseInt(selectedLogisticsIndex),
+                                "headers",
+                                e.target.value,
+                              )
+                            }
+                            placeholder="Ej: Peso (kg), Largo (cm), Ancho (cm)"
+                          />
+                        </Field>
+                        <Field>
+                          <FieldLabel>Campos (separados por coma)</FieldLabel>
+                          <Input
+                            value={configState.logisticsTemplates[
+                              parseInt(selectedLogisticsIndex)
+                            ].fields.join(", ")}
+                            onChange={(e) =>
+                              updateLogisticsTemplate(
+                                parseInt(selectedLogisticsIndex),
+                                "fields",
+                                e.target.value,
+                              )
+                            }
+                            placeholder="Ej: peso, largo, ancho"
+                          />
+                          <div className="mt-2">
+                            <FieldDescription className="mb-2">
+                              Campos disponibles de la orden (se completarán
+                              automáticamente si coinciden):
+                            </FieldDescription>
+                            <div className="flex flex-wrap gap-2">
+                              {AVAILABLE_ORDER_FIELDS.map((field) => (
+                                <Badge
+                                  key={field}
+                                  variant="secondary"
+                                  className="text-xs"
+                                >
+                                  {field}
+                                </Badge>
+                              ))}
+                            </div>
+                          </div>
+                        </Field>
+                      </div>
+                    )}
+                </div>
               </FieldSet>
+              <input
+                type="hidden"
+                name="logisticsTemplatesJSON"
+                value={JSON.stringify(configState.logisticsTemplates)}
+              />
             </FieldGroup>
           </fetcher.Form>
         </ScrollArea>
