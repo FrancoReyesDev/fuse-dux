@@ -11,7 +11,6 @@ export const ORDER_FIELD_MAPPING: Record<string, string> = {
   dni_cliente: "customer.docNumber",
   monto_total: "totalHelper.total",
   cantidad_items: "items.length",
-  id_orden: "id",
   fecha_creacion: "createdAt",
   observaciones: "observations",
 };

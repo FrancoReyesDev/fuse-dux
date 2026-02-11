@@ -23,11 +23,11 @@ export interface LogisticsMetadataTemplate {
 }
 
 export interface ConfigConstants {
-  profitFactorOptions: number[];
-  creditCardFactor: number;
-  threeInstallmentsFactor: number;
-  // Dux Billing Templates
-  duxTemplates: DuxBillingTemplate[];
-  // Logistics Metadata Templates
-  logisticsTemplates: LogisticsMetadataTemplate[];
+  factors: {
+    profitFactorOptions: number[];
+    creditCardFactor: number;
+    threeInstallmentsFactor: number;
+  };
+  duxBillingTemplates: DuxBillingTemplate[];
+  logisticMetadataTemplates: LogisticsMetadataTemplate[];
 }
