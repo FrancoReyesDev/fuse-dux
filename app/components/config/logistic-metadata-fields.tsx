@@ -1,7 +1,14 @@
 import type { ConfigConstants } from "~/types/config-constants";
 import { FieldDescription, FieldLegend, FieldSet } from "../ui/field";
-import { Select } from "../ui/select";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "../ui/select";
 import { useState } from "react";
+import { Button } from "../ui/button";
 
 interface Props {
   formConfigConstants: ConfigConstants;
@@ -19,12 +26,14 @@ export function LogisticMetadataTemplatesFields({
   const indexedTemplates = Object.fromEntries(
     formTemplates.map((template) => [template.name, template]),
   );
-
   const templateKeys = Object.keys(indexedTemplates);
 
   const [selectedTemplateIndex, setSelectedTemplateIndex] = useState<string>(
     templateKeys.length ? templateKeys[0] : "",
   );
+  const selectedTemplate = indexedTemplates[selectedTemplateIndex];
+
+  const [createNewTemplate, setCreateNewTemplate] = useState(false);
 
   return (
     <FieldSet>
