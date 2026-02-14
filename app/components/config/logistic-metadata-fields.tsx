@@ -17,18 +17,33 @@ import {
   SelectTrigger,
   SelectValue,
 } from "../ui/select";
-import { useEffect, useState } from "react";
+import { useEffect, useState, type Dispatch, type SetStateAction } from "react";
 import { Button } from "../ui/button";
 import { Input } from "../ui/input";
 import { AVAILABLE_ORDER_FIELDS } from "~/types/order-field-mapping";
 import { Badge } from "../ui/badge";
-import { PlusIcon } from "lucide-react";
+import { Delete, PlusIcon, Trash, Trash2 } from "lucide-react";
 
-const defaultMetadataTemplate: LogisticsMetadataTemplate = {
-  name: "",
-  headers: [],
-  fields: [],
+type TemplateData = {
+  name: string;
+  headers: string;
+  fields: string;
 };
+
+const defaultMetadataTemplate: TemplateData = {
+  name: "",
+  headers: "",
+  fields: "",
+};
+
+const joinFields = (fields: string[]) =>
+  fields.filter((f) => f.trim() !== "").join(", ");
+
+const splitFields = (fields: string) =>
+  fields
+    .split(",")
+    .map((f) => f.trim())
+    .filter((f) => f !== "");
 
 interface TemplateSelectorProps {
   selectedTemplateIndex: string;
@@ -69,10 +84,10 @@ function TemplateSelector({
           variant="destructive"
           onClick={handleDeleteTemplate}
         >
-          Eliminar
+          <Trash2 />
         </Button>
         <Button type="button" variant="outline" onClick={setCreateMode}>
-          Nueva
+          <PlusIcon />
         </Button>
       </div>
     </Field>
@@ -81,18 +96,16 @@ function TemplateSelector({
 
 interface NewTemplateFormProps {
   newTemplateName: string;
-  isSaveDisabled: boolean;
+  isCancelDisabled: boolean;
   handleChangeNewTemplateName: (name: string) => void;
   setSelectorMode: () => void;
-  handleSaveTemplate: () => void;
 }
 
 function NewTemplateForm({
   newTemplateName,
-  isSaveDisabled,
-  handleChangeNewTemplateName,
+  isCancelDisabled,
   setSelectorMode,
-  handleSaveTemplate,
+  handleChangeNewTemplateName,
 }: NewTemplateFormProps) {
   return (
     <Field>
@@ -103,15 +116,13 @@ function NewTemplateForm({
           onChange={(e) => handleChangeNewTemplateName(e.target.value)}
           placeholder="Ej: Redshift"
         />
+
         <Button
           type="button"
-          variant="outline"
-          disabled={isSaveDisabled}
-          onClick={handleSaveTemplate}
+          variant="destructive"
+          disabled={isCancelDisabled}
+          onClick={setSelectorMode}
         >
-          Guardar
-        </Button>
-        <Button type="button" variant="destructive" onClick={setSelectorMode}>
           Cancelar
         </Button>
       </div>
@@ -121,103 +132,102 @@ function NewTemplateForm({
 
 interface Props {
   formConfigConstants: ConfigConstants;
-  setFormConfigConstants: (formConfigConstants: ConfigConstants) => void;
+  setFormConfigConstants: Dispatch<SetStateAction<ConfigConstants>>;
 }
 
 export function LogisticMetadataTemplatesFields({
   formConfigConstants,
   setFormConfigConstants,
 }: Props) {
-  const [formTemplates, setFormTemplates] = useState<
-    ConfigConstants["logisticMetadataTemplates"]
-  >(formConfigConstants.logisticMetadataTemplates);
+  const formTemplates = formConfigConstants.logisticMetadataTemplates;
 
   const indexedTemplates = Object.fromEntries(
     formTemplates.map((template) => [template.name, template]),
   );
   const templateKeys = Object.keys(indexedTemplates);
 
-  const [selectedTemplateKey, setSelectedTemplateKey] = useState<string>(
-    templateKeys.length ? templateKeys[0] : "",
+  const [selectedTemplateKey, setSelectedTemplateKey] = useState<string | null>(
+    templateKeys.length ? templateKeys[0] : null,
   );
 
-  console.log({ selectedTemplateKey, templateKeys, indexedTemplates });
+  const selectedTemplate = selectedTemplateKey
+    ? indexedTemplates[selectedTemplateKey]
+    : null;
 
-  const selectedTemplate = indexedTemplates[selectedTemplateKey];
+  console.log({ selectedTemplate });
 
-  const [createNewTemplate, setCreateNewTemplate] = useState(false);
+  const [templateDraft, setTemplateDraft] = useState<TemplateData>(
+    selectedTemplate
+      ? {
+          name: selectedTemplate.name,
+          headers: joinFields(selectedTemplate.headers),
+          fields: joinFields(selectedTemplate.fields),
+        }
+      : defaultMetadataTemplate,
+  );
 
-  const [newTemplate, setNewTemplate] = useState<LogisticsMetadataTemplate>({
-    ...defaultMetadataTemplate,
-  });
+  const isCreateMode =
+    templateKeys.length === 0 || selectedTemplateKey === null;
 
-  useEffect(() => {
-    setNewTemplate({ ...defaultMetadataTemplate });
-  }, [createNewTemplate]);
+  const isSaveDisabled =
+    !templateDraft.name || splitFields(templateDraft.fields).length === 0;
 
-  const isCreateMode = createNewTemplate || formTemplates.length === 0;
-
-  const templateData = isCreateMode
-    ? newTemplate
-    : (selectedTemplate ?? defaultMetadataTemplate);
-
-  function handleChangeTemplateData(
-    field: keyof LogisticsMetadataTemplate,
-    value: string,
-  ) {
-    const finalValue =
-      field === "headers" || field === "fields"
-        ? value
-            .split(",")
-            .filter((s) => s.trim() !== "")
-            .map((s) => s.trim())
-        : value;
-
-    if (isCreateMode) {
-      setNewTemplate({ ...newTemplate, [field]: finalValue });
-    } else {
-      const newTemplate = { ...selectedTemplate, [field]: finalValue };
-      const newIndexedTemplates = {
-        ...indexedTemplates,
-        [selectedTemplateKey]: newTemplate,
-      };
-      setFormTemplates(Object.values(newIndexedTemplates));
-    }
+  function handleChangeTemplateData(field: keyof TemplateData, value: string) {
+    setTemplateDraft((prev) => ({ ...prev, [field]: value }));
   }
 
-  function handleDeleteTemplate() {
-    const { [selectedTemplateKey]: _, ...rest } = indexedTemplates;
-    const remaining = Object.values(rest);
-    setFormTemplates(remaining);
-    if (remaining.length === 0) {
-      setNewTemplate({ ...defaultMetadataTemplate });
-    }
-    const remainingKeys = Object.keys(rest);
-    setSelectedTemplateKey(remainingKeys.length ? remainingKeys[0] : "");
+  function handleSelectTemplate(templateKey: string | null) {
+    setSelectedTemplateKey(templateKey);
+    const selectedTemplate = templateKey ? indexedTemplates[templateKey] : null;
+    setTemplateDraft(
+      selectedTemplate
+        ? {
+            ...selectedTemplate,
+            headers: joinFields(selectedTemplate.headers),
+            fields: joinFields(selectedTemplate.fields),
+          }
+        : defaultMetadataTemplate,
+    );
+  }
+
+  function setFormTemplates(
+    templates: ConfigConstants["logisticMetadataTemplates"],
+  ) {
+    setFormConfigConstants((prev) => ({
+      ...prev,
+      logisticMetadataTemplates: templates,
+    }));
   }
 
   function handleSaveTemplate() {
-    const syncedHeaders = newTemplate.fields.map((field, i) => {
-      const header = newTemplate.headers[i];
-      return header && header.trim() !== "" ? header : field;
-    });
-
-    const templateToSave = {
-      ...newTemplate,
-      headers: syncedHeaders,
+    const newTemplate = {
+      ...templateDraft,
+      headers: splitFields(templateDraft.headers),
+      fields: splitFields(templateDraft.fields),
     };
 
-    const newIndexedTemplates = {
-      ...indexedTemplates,
-      [templateToSave.name]: templateToSave,
-    };
+    const newIndexedTemplates = { ...indexedTemplates };
+
+    if (selectedTemplateKey && selectedTemplateKey !== templateDraft.name) {
+      delete newIndexedTemplates[selectedTemplateKey];
+    }
+
+    newIndexedTemplates[templateDraft.name] = newTemplate;
+
     setFormTemplates(Object.values(newIndexedTemplates));
-    setCreateNewTemplate(false);
-    setSelectedTemplateKey(templateToSave.name);
+    handleSelectTemplate(templateDraft.name);
+  }
+
+  function handleDeleteTemplate() {
+    if (!selectedTemplateKey) return;
+    setFormTemplates(
+      formTemplates.filter((t) => t.name !== selectedTemplateKey),
+    );
+    setSelectedTemplateKey(null);
   }
 
   return (
-    <FieldSet>
+    <FieldSet className="p-2">
       <FieldLegend>Metadatos Logística</FieldLegend>
       <FieldDescription>
         Configura plantillas de metadatos para distintas logísticas.
@@ -226,23 +236,21 @@ export function LogisticMetadataTemplatesFields({
       <FieldGroup>
         {isCreateMode ? (
           <NewTemplateForm
-            newTemplateName={newTemplate.name}
-            isSaveDisabled={
-              !newTemplate.name ||
-              newTemplate.fields.filter((f) => f.trim() !== "").length === 0
-            }
+            newTemplateName={templateDraft.name}
+            isCancelDisabled={formTemplates.length === 0}
             handleChangeNewTemplateName={(name) =>
               handleChangeTemplateData("name", name)
             }
-            setSelectorMode={() => setCreateNewTemplate(false)}
-            handleSaveTemplate={handleSaveTemplate}
+            setSelectorMode={() =>
+              handleSelectTemplate(templateKeys[0] ?? null)
+            }
           />
         ) : (
           <TemplateSelector
             selectedTemplateIndex={selectedTemplateKey}
             templates={formTemplates}
-            setSelectedTemplateIndex={setSelectedTemplateKey}
-            setCreateMode={() => setCreateNewTemplate(true)}
+            setSelectedTemplateIndex={handleSelectTemplate}
+            setCreateMode={() => handleSelectTemplate(null)}
             handleDeleteTemplate={handleDeleteTemplate}
           />
         )}
@@ -253,7 +261,7 @@ export function LogisticMetadataTemplatesFields({
             coincidir con los campos de abajo.
           </FieldDescription>
           <Input
-            value={templateData.headers?.join(", ") || ""}
+            value={templateDraft.headers}
             onChange={(e) =>
               handleChangeTemplateData("headers", e.target.value)
             }
@@ -263,24 +271,30 @@ export function LogisticMetadataTemplatesFields({
         <Field>
           <FieldLabel>Campos (separados por coma)</FieldLabel>
           <Input
-            value={templateData.fields.join(", ")}
+            value={templateDraft.fields}
             onChange={(e) => handleChangeTemplateData("fields", e.target.value)}
             placeholder="Ej: peso, largo, ancho"
           />
-          <div className="mt-2">
-            <FieldDescription className="mb-2">
-              Campos disponibles de la orden (se completarán automáticamente si
-              coinciden):
-            </FieldDescription>
-            <div className="flex flex-wrap gap-2">
-              {AVAILABLE_ORDER_FIELDS.map((field) => (
-                <Badge key={field} variant="secondary" className="text-xs">
-                  {field}
-                </Badge>
-              ))}
-            </div>
+          <FieldDescription className="mb-2">
+            Campos disponibles de la orden (se completarán automáticamente si
+            coinciden):
+          </FieldDescription>
+          <div className="flex flex-wrap gap-2">
+            {AVAILABLE_ORDER_FIELDS.map((field) => (
+              <Badge key={field} variant="secondary" className="text-xs">
+                {field}
+              </Badge>
+            ))}
           </div>
         </Field>
+        <Button
+          type="button"
+          disabled={isSaveDisabled}
+          variant={"outline"}
+          onClick={handleSaveTemplate}
+        >
+          Guardar Plantillas
+        </Button>
       </FieldGroup>
     </FieldSet>
   );

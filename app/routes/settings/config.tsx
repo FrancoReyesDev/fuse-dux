@@ -57,8 +57,6 @@ export async function action({ request, context }: Route.ActionArgs) {
 
   console.log(formData);
 
-  return;
-
   const kv = context.cloudflare.env.fuse_dux_kv;
 
   const program = Effect.gen(function* () {
@@ -72,20 +70,16 @@ export async function action({ request, context }: Route.ActionArgs) {
     );
 
     const existingConfig = yield* getConfigFromKv(kv).pipe(Effect.either);
-    const duxTemplatesJSON = formData.get("duxTemplatesJSON");
-    const duxTemplates: DuxBillingTemplate[] = duxTemplatesJSON
-      ? JSON.parse(duxTemplatesJSON.toString())
-      : existingConfig._tag === "Right"
+    const duxTemplates =
+      formData.duxBillingTemplates ||
+      (existingConfig._tag === "Right"
         ? existingConfig.right.duxBillingTemplates
-        : [];
-
-    const logisticsTemplatesJSON = formData.get("logisticsTemplatesJSON");
-    const logisticsTemplates: LogisticsMetadataTemplate[] =
-      logisticsTemplatesJSON
-        ? JSON.parse(logisticsTemplatesJSON.toString())
-        : existingConfig._tag === "Right"
-          ? existingConfig.right.logisticMetadataTemplates
-          : [];
+        : []);
+    const logisticsTemplates =
+      formData.logisticMetadataTemplates ||
+      (existingConfig._tag === "Right"
+        ? existingConfig.right.logisticMetadataTemplates
+        : []);
 
     return {
       factors: {
@@ -152,7 +146,7 @@ const configConstantsDefualt: ConfigConstants = {
 export default function Config({ loaderData }: Route.ComponentProps) {
   const { configConstants } = loaderData;
   const [formConfigConstants, setFormConfigConstants] =
-    useState<ConfigConstants>(configConstantsDefualt);
+    useState<ConfigConstants>(configConstants ?? configConstantsDefualt);
 
   const fetcher = useFetcher<typeof action>();
   const isSavingConfig = fetcher.state === "submitting";
