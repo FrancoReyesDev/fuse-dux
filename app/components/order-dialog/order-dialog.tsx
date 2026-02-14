@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "~/components/ui/tabs";
 import {
   Dialog,
@@ -35,12 +35,18 @@ import { ItemFields } from "./items-fields";
 import { GeneralInformationFields } from "./general-information-fields";
 import { ScrollArea } from "../ui/scroll-area";
 
+import { LogisticForm } from "./logistic-form";
+import type { ConfigConstants } from "~/types/config-constants";
+import { mapOrderToField } from "~/utils/order-mapper";
+import { AVAILABLE_ORDER_FIELDS } from "~/types/order-field-mapping";
+
 interface Props {
   open: boolean;
   setOpen: (open: boolean) => void;
+  config: ConfigConstants;
 }
 
-export function OrderDialog({ open, setOpen }: Props) {
+export function OrderDialog({ open, setOpen, config }: Props) {
   const [activeTab, setActiveTab] = useState("general");
 
   useEffect(() => {
@@ -70,6 +76,82 @@ export function OrderDialog({ open, setOpen }: Props) {
   const handleRemoveOrder = () => {
     removeOrder(order.id);
     setOpen(false);
+  };
+
+  const handleUpdateMetadata = useCallback(
+    (metadata: Record<string, string | number>) => {
+      setOrder((prev) => {
+        // Only update if metadata actually changed to prevent loops
+        if (
+          JSON.stringify(prev.shipmentMetadata) === JSON.stringify(metadata)
+        ) {
+          return prev;
+        }
+        return {
+          ...prev,
+          shipmentMetadata: metadata,
+        };
+      });
+    },
+    [setOrder],
+  );
+
+  const handleExportLogistic = () => {
+    const metadata = order.shipmentMetadata;
+    const templateName = metadata?._templateName as string;
+
+    if (!metadata || !templateName) {
+      console.warn("No hay datos de logística para exportar.");
+      return;
+    }
+
+    const template = config.logisticMetadataTemplates.find(
+      (t) => t.name === templateName,
+    );
+
+    if (!template) {
+      console.warn("No se encontró la plantilla de logística.");
+      return;
+    }
+
+    // Prepare CSV content
+    // Header row
+    const headers =
+      template.headers && template.headers.length > 0
+        ? template.headers
+        : template.fields;
+
+    // Data row
+    // We strictly follow the order of fields in the template
+    const values = template.fields.map((field) => {
+      const key = field.trim();
+      let value = "";
+
+      if (AVAILABLE_ORDER_FIELDS.includes(key)) {
+        value = String(mapOrderToField(order, key));
+      } else {
+        value = metadata[key] !== undefined ? String(metadata[key]) : "";
+      }
+
+      // Escape double quotes
+      const escapedValue = value.replace(/"/g, '""');
+      return `"${escapedValue}"`;
+    });
+
+    const csvContent = [headers.join(","), values.join(",")].join("\n");
+
+    // trigger download
+    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.setAttribute(
+      "download",
+      `Order_${order.id || "new"}_${templateName}.csv`,
+    );
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
   };
 
   return (
@@ -107,7 +189,6 @@ export function OrderDialog({ open, setOpen }: Props) {
                 <GeneralInformationFields
                   customer={order.customer!}
                   responsibleName={order.responsibleName!}
-                  paymentMethod={order.paymentMethod}
                   paymentStatus={order.paymentStatus}
                   wasShipped={order.wasShipped}
                   shipmentDate={
@@ -118,9 +199,6 @@ export function OrderDialog({ open, setOpen }: Props) {
                   onCustomerChange={updateCustomer}
                   onResponsibleNameChange={(name) =>
                     setOrder((prev) => ({ ...prev, responsibleName: name }))
-                  }
-                  onPaymentMethodChange={(method) =>
-                    setOrder((prev) => ({ ...prev, paymentMethod: method }))
                   }
                   onPaymentStatusChange={(status) =>
                     setOrder((prev) => ({ ...prev, paymentStatus: status }))
@@ -139,15 +217,20 @@ export function OrderDialog({ open, setOpen }: Props) {
                   paymentMethod={order.paymentMethod}
                   onRemoveItem={removeItem}
                   onUpdateItem={upsertItem}
+                  onPaymentMethodChange={(method) =>
+                    setOrder((prev) => ({ ...prev, paymentMethod: method }))
+                  }
                 />
               </div>
             </TabsContent>
 
             <TabsContent value="logistica" className="mt-0 space-y-6">
-              <div className="flex justify-start pt-4">
-                <Button variant="ghost" onClick={() => setActiveTab("items")}>
-                  <ChevronLeft className="size-4 mr-2" /> Volver a Items
-                </Button>
+              <div className="w-full bg-muted/30 rounded-lg border">
+                <LogisticForm
+                  order={order}
+                  config={config}
+                  onUpdateMetadata={handleUpdateMetadata}
+                />
               </div>
             </TabsContent>
           </ScrollArea>
@@ -157,6 +240,7 @@ export function OrderDialog({ open, setOpen }: Props) {
           <div className="flex-1 flex flex-row gap-3">
             <Button
               variant="outline"
+              disabled={true}
               onClick={() => console.log("Facturando...")}
               className="flex items-center gap-2"
             >
@@ -164,7 +248,7 @@ export function OrderDialog({ open, setOpen }: Props) {
             </Button>
             <Button
               variant="outline"
-              onClick={() => console.log("Exportando Logística...")}
+              onClick={handleExportLogistic}
               className="flex items-center gap-2"
             >
               <FileUp className="size-4" /> Exportar Logística

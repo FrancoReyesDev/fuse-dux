@@ -29,8 +29,9 @@ export function CustomProductDialog({ configs, children }: Props) {
   const [open, setOpen] = useState(false);
   const [titulo, setTitulo] = useState("");
   const [costo, setCosto] = useState<number | "">("");
-  const { profitFactorOptions, creditCardFactor, threeInstallmentsFactor } =
-    configs;
+  const {
+    factors: { profitFactorOptions, creditCardFactor, threeInstallmentsFactor },
+  } = configs;
   const [profit, setProfit] = useState<number | "">(""); // Multiplicador Efectivo
 
   const [previewText, setPreviewText] = useState("");

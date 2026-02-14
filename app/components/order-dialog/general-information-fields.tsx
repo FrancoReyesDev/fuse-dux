@@ -25,7 +25,6 @@ import { es } from "date-fns/locale";
 interface Props {
   customer: Customer;
   responsibleName: string;
-  paymentMethod: PaymentMethod;
   paymentStatus: "PAID" | "PENDING";
   wasShipped: boolean;
   shipmentDate: Date | null;
@@ -33,7 +32,6 @@ interface Props {
   observations: string | null;
   onCustomerChange: (customer: Customer) => void;
   onResponsibleNameChange: (name: string) => void;
-  onPaymentMethodChange: (method: PaymentMethod) => void;
   onPaymentStatusChange: (status: "PAID" | "PENDING") => void;
   onObservationsChange: (observations: string) => void;
 }
@@ -41,7 +39,6 @@ interface Props {
 export function GeneralInformationFields({
   customer,
   responsibleName,
-  paymentMethod,
   paymentStatus,
   wasShipped,
   shipmentDate,
@@ -49,7 +46,6 @@ export function GeneralInformationFields({
   observations,
   onCustomerChange,
   onResponsibleNameChange,
-  onPaymentMethodChange,
   onPaymentStatusChange,
   onObservationsChange,
 }: Props) {
@@ -145,31 +141,6 @@ export function GeneralInformationFields({
       <FieldSet>
         <FieldLegend>Estado de la Orden</FieldLegend>
         <FieldGroup className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <Field>
-            <FieldLabel>Método de Pago</FieldLabel>
-            <Select
-              value={paymentMethod}
-              onValueChange={(value) =>
-                onPaymentMethodChange(value as PaymentMethod)
-              }
-            >
-              <SelectTrigger>
-                <SelectValue placeholder="Seleccionar método" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="efTrans">
-                  Efectivo / Transferencia
-                </SelectItem>
-                <SelectItem value="credDebQr">Crédito / Débito / QR</SelectItem>
-                <SelectItem value="credito3Pagos">Crédito 3 Pagos</SelectItem>
-                <SelectItem value="credito6Cuotas">Crédito 6 Cuotas</SelectItem>
-                <SelectItem value="hotSale">Hot Sale</SelectItem>
-                <SelectItem value="mayorista">Mayorista</SelectItem>
-                <SelectItem value="meli">Mercado Libre</SelectItem>
-              </SelectContent>
-            </Select>
-          </Field>
-
           <Field>
             <FieldLabel>Estado del Pago</FieldLabel>
             <div className="flex items-center space-x-2 mt-2">

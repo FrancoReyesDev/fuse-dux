@@ -17,15 +17,26 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from "~/components/ui/tooltip";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "~/components/ui/select";
+import { Label } from "~/components/ui/label";
 
+import { Effect } from "effect";
 import type { OrderItem, PaymentMethod } from "~/types/order";
 import type { Product } from "~/types/product";
+import { stringToFloat } from "~/utils/string-to-float";
 
 interface ItemsFieldsProps {
   orderItems: OrderItem[];
   paymentMethod: PaymentMethod;
   onRemoveItem: (productId: Product["codigo"]) => void;
   onUpdateItem: (item: OrderItem) => void;
+  onPaymentMethodChange: (method: PaymentMethod) => void;
 }
 
 export function ItemFields({
@@ -33,6 +44,7 @@ export function ItemFields({
   paymentMethod,
   onRemoveItem,
   onUpdateItem,
+  onPaymentMethodChange,
 }: ItemsFieldsProps) {
   // Common styles for column widths
 
@@ -57,6 +69,30 @@ export function ItemFields({
 
   return (
     <div className="rounded-md flex flex-col overflow-hidden">
+      <div className="p-4 bg-muted/50 border-b flex items-center justify-between">
+        <div className="flex items-center gap-2">
+          <Label>Método de Pago:</Label>
+          <Select
+            value={paymentMethod}
+            onValueChange={(value) =>
+              onPaymentMethodChange(value as PaymentMethod)
+            }
+          >
+            <SelectTrigger className="w-[200px]">
+              <SelectValue placeholder="Seleccionar método" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="efTrans">Efectivo / Transferencia</SelectItem>
+              <SelectItem value="credDebQr">Crédito / Débito / QR</SelectItem>
+              <SelectItem value="credito3Pagos">Crédito 3 Pagos</SelectItem>
+              <SelectItem value="credito6Cuotas">Crédito 6 Cuotas</SelectItem>
+              <SelectItem value="hotSale">Hot Sale</SelectItem>
+              <SelectItem value="mayorista">Mayorista</SelectItem>
+              <SelectItem value="meli">Mercado Libre</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+      </div>
       <div className="bg-muted border-b">
         <Table className="table-fixed">
           <TableHeader>
@@ -92,7 +128,9 @@ export function ItemFields({
               </TableRow>
             ) : (
               orderItems.map(({ product, quantity }, idx) => {
-                const price = parseFloat(product.precios[paymentMethod] || "0");
+                const price = Effect.runSync(
+                  stringToFloat(product.precios[paymentMethod] || "0"),
+                );
 
                 return (
                   <TableRow key={idx} className="hover:bg-muted/50">
@@ -198,8 +236,8 @@ export function ItemFields({
                 $
                 {orderItems
                   .reduce((acc, { product, quantity }) => {
-                    const price = parseFloat(
-                      product.precios[paymentMethod] || "0",
+                    const price = Effect.runSync(
+                      stringToFloat(product.precios[paymentMethod] || "0"),
                     );
                     return acc + quantity * price;
                   }, 0)

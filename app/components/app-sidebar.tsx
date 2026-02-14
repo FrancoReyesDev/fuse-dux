@@ -63,7 +63,11 @@ export function AppSidebar({ config }: Props) {
 
   return (
     <Sidebar collapsible="icon" variant="floating">
-      <OrderDialog open={openOrderDialog} setOpen={setOpenOrderDialog} />
+      <OrderDialog
+        open={openOrderDialog}
+        setOpen={setOpenOrderDialog}
+        config={config}
+      />
       <SidebarHeader>
         <SidebarMenu>
           <SidebarMenuItem>

@@ -50,46 +50,14 @@ import { CalculatorFactorsFields } from "~/components/config/calculator-factors-
 import { LogisticMetadataTemplatesFields } from "~/components/config/logistic-metadata-fields";
 
 export async function action({ request, context }: Route.ActionArgs) {
-  const formData = await request.json<ConfigConstants>();
-  const profitOptions = formData.factors.profitFactorOptions;
-  const factorTarjeta1 = formData.factors.creditCardFactor;
-  const factorTarjeta3 = formData.factors.threeInstallmentsFactor;
-
-  console.log(formData);
-
+  const payload = await request.json<ConfigConstants>();
   const kv = context.cloudflare.env.fuse_dux_kv;
 
   const program = Effect.gen(function* () {
-    const profitFactorOptions = yield* pipe(
-      profitOptions.toString().split(","),
-      Effect.forEach((option) => stringToFloat(option)),
-    );
-    const creditCardFactor = yield* stringToFloat(factorTarjeta1.toString());
-    const threeInstallmentsFactor = yield* stringToFloat(
-      factorTarjeta3.toString(),
-    );
+    // Basic validation could be added here if needed, but we rely on the type for now.
+    // The payload should already match ConfigConstants structure.
 
-    const existingConfig = yield* getConfigFromKv(kv).pipe(Effect.either);
-    const duxTemplates =
-      formData.duxBillingTemplates ||
-      (existingConfig._tag === "Right"
-        ? existingConfig.right.duxBillingTemplates
-        : []);
-    const logisticsTemplates =
-      formData.logisticMetadataTemplates ||
-      (existingConfig._tag === "Right"
-        ? existingConfig.right.logisticMetadataTemplates
-        : []);
-
-    return {
-      factors: {
-        profitFactorOptions,
-        creditCardFactor,
-        threeInstallmentsFactor,
-      },
-      duxBillingTemplates: duxTemplates,
-      logisticMetadataTemplates: logisticsTemplates,
-    } satisfies ConfigConstants;
+    return payload;
   }).pipe(
     Effect.flatMap((config) => Effect.try(() => JSON.stringify(config))),
     Effect.flatMap((configString) =>
@@ -147,6 +115,8 @@ export default function Config({ loaderData }: Route.ComponentProps) {
   const { configConstants } = loaderData;
   const [formConfigConstants, setFormConfigConstants] =
     useState<ConfigConstants>(configConstants ?? configConstantsDefualt);
+
+  console.log({ configConstants });
 
   const fetcher = useFetcher<typeof action>();
   const isSavingConfig = fetcher.state === "submitting";

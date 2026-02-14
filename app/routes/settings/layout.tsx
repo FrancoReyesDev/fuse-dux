@@ -1,13 +1,16 @@
-import { Link, Outlet, useNavigate } from "react-router";
+import { Link, Outlet, useLocation, useNavigate } from "react-router";
 import { Tabs, TabsList, TabsTrigger } from "~/components/ui/tabs";
 import { Button } from "~/components/ui/button";
 import { ArrowLeft } from "lucide-react";
 
 export default function SettingsLayout() {
   const navigate = useNavigate();
+  const location = useLocation();
+
+  const currentTab = location.pathname.endsWith("config") ? "config" : "/";
 
   const handleTabChange = (value: string) => {
-    navigate(`/settings/${value}`);
+    navigate(value === "/" ? "/settings" : `/settings/${value}`);
   };
 
   return (
@@ -30,7 +33,11 @@ export default function SettingsLayout() {
         </Button>
       </div>
 
-      <Tabs defaultValue="/" onValueChange={handleTabChange} className="w-full">
+      <Tabs
+        value={currentTab}
+        onValueChange={handleTabChange}
+        className="w-full"
+      >
         <TabsList className="grid w-full grid-cols-2">
           <TabsTrigger value="/">Cargar Productos</TabsTrigger>
           <TabsTrigger value="config">Configuración Global</TabsTrigger>

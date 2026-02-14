@@ -154,7 +154,7 @@ export function LogisticMetadataTemplatesFields({
     ? indexedTemplates[selectedTemplateKey]
     : null;
 
-  console.log({ selectedTemplate });
+  /* console.log({ selectedTemplate }); */
 
   const [templateDraft, setTemplateDraft] = useState<TemplateData>(
     selectedTemplate
@@ -215,15 +215,27 @@ export function LogisticMetadataTemplatesFields({
     newIndexedTemplates[templateDraft.name] = newTemplate;
 
     setFormTemplates(Object.values(newIndexedTemplates));
-    handleSelectTemplate(templateDraft.name);
+    setSelectedTemplateKey(templateDraft.name);
   }
 
   function handleDeleteTemplate() {
     if (!selectedTemplateKey) return;
-    setFormTemplates(
-      formTemplates.filter((t) => t.name !== selectedTemplateKey),
+    const remainingTemplates = formTemplates.filter(
+      (t) => t.name !== selectedTemplateKey,
     );
-    setSelectedTemplateKey(null);
+    setFormTemplates(remainingTemplates);
+    if (remainingTemplates.length === 0) {
+      setTemplateDraft(defaultMetadataTemplate);
+    }
+    const nextTemplate = remainingTemplates[0];
+    setSelectedTemplateKey(nextTemplate ? nextTemplate.name : null);
+    if (nextTemplate) {
+      setTemplateDraft({
+        name: nextTemplate.name,
+        headers: joinFields(nextTemplate.headers),
+        fields: joinFields(nextTemplate.fields),
+      });
+    }
   }
 
   return (
