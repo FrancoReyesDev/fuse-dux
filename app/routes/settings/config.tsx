@@ -47,6 +47,7 @@ import type {
   TipoEntrega,
 } from "~/types/dux-dto/post-factura-dto";
 import { CalculatorFactorsFields } from "~/components/config/calculator-factors-fields";
+import { LogisticMetadataTemplatesFields } from "~/components/config/logistic-metadata-fields";
 
 export async function action({ request, context }: Route.ActionArgs) {
   const formData = await request.json<ConfigConstants>();
@@ -172,9 +173,14 @@ export default function Config({ loaderData }: Route.ComponentProps) {
         </CardDescription>
       </CardHeader>
       <CardContent>
-        <ScrollArea className="h-[60vh]">
+        <ScrollArea className="h-[60vh] pr-5">
           <FieldGroup>
             <CalculatorFactorsFields
+              formConfigConstants={formConfigConstants}
+              setFormConfigConstants={setFormConfigConstants}
+            />
+            <FieldSeparator />
+            <LogisticMetadataTemplatesFields
               formConfigConstants={formConfigConstants}
               setFormConfigConstants={setFormConfigConstants}
             />
