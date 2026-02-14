@@ -15,7 +15,9 @@ import { mapOrderToField } from "~/utils/order-mapper";
 interface LogisticFormProps {
   order: Order;
   config: ConfigConstants;
-  onUpdateMetadata: (metadata: Record<string, string | number>) => void;
+  onUpdateMetadata: (
+    metadata: Record<string, string | number | boolean>,
+  ) => void;
 }
 
 export function LogisticForm({
@@ -85,9 +87,12 @@ export function LogisticForm({
             const isAutoFilled = AVAILABLE_ORDER_FIELDS.includes(fieldKey);
 
             // Calculate value on render
-            const value = isAutoFilled
+            const rawValue = isAutoFilled
               ? mapOrderToField(order, fieldKey)
-              : order.shipmentMetadata?.[fieldKey] || "";
+              : (order.shipmentMetadata?.[fieldKey] ?? "");
+
+            const value =
+              typeof rawValue === "boolean" ? String(rawValue) : rawValue;
 
             return (
               <div

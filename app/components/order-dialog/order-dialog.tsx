@@ -29,6 +29,7 @@ import {
   Receipt,
   FileUp,
   Save,
+  Archive,
 } from "lucide-react";
 import { useOrder } from "~/hooks/use-order";
 import { ItemFields } from "./items-fields";
@@ -63,6 +64,7 @@ export function OrderDialog({ open, setOpen, config }: Props) {
     removeItem,
     removeOrder,
     upsertItem,
+    archiveOrder,
   } = useOrder();
 
   const handleSubmit = () => {
@@ -79,7 +81,7 @@ export function OrderDialog({ open, setOpen, config }: Props) {
   };
 
   const handleUpdateMetadata = useCallback(
-    (metadata: Record<string, string | number>) => {
+    (metadata: Record<string, string | number | boolean>) => {
       setOrder((prev) => {
         // Only update if metadata actually changed to prevent loops
         if (
@@ -256,28 +258,41 @@ export function OrderDialog({ open, setOpen, config }: Props) {
           </div>
           <div className="flex flex-row gap-3">
             {order.id && (
-              <AlertDialog>
-                <AlertDialogTrigger asChild>
-                  <Button variant="destructive">Borrar Orden</Button>
-                </AlertDialogTrigger>
-                <AlertDialogContent>
-                  <AlertDialogHeader>
-                    <AlertDialogTitle>¿Borrar esta orden?</AlertDialogTitle>
-                    <AlertDialogDescription>
-                      Si confirmas, la orden se eliminará de la lista.
-                    </AlertDialogDescription>
-                  </AlertDialogHeader>
-                  <AlertDialogFooter>
-                    <AlertDialogCancel>Cancelar</AlertDialogCancel>
-                    <AlertDialogAction
-                      onClick={handleRemoveOrder}
-                      variant="destructive"
-                    >
-                      Borrar
-                    </AlertDialogAction>
-                  </AlertDialogFooter>
-                </AlertDialogContent>
-              </AlertDialog>
+              <>
+                <Button
+                  variant="secondary"
+                  onClick={() => {
+                    archiveOrder(order.id);
+                    setOpen(false);
+                  }}
+                  className="flex items-center gap-2"
+                >
+                  <Archive className="size-4" />
+                  Archivar
+                </Button>
+                <AlertDialog>
+                  <AlertDialogTrigger asChild>
+                    <Button variant="destructive">Borrar Orden</Button>
+                  </AlertDialogTrigger>
+                  <AlertDialogContent>
+                    <AlertDialogHeader>
+                      <AlertDialogTitle>¿Borrar esta orden?</AlertDialogTitle>
+                      <AlertDialogDescription>
+                        Si confirmas, la orden se eliminará de la lista.
+                      </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                      <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                      <AlertDialogAction
+                        onClick={handleRemoveOrder}
+                        variant="destructive"
+                      >
+                        Borrar
+                      </AlertDialogAction>
+                    </AlertDialogFooter>
+                  </AlertDialogContent>
+                </AlertDialog>
+              </>
             )}
             <Button
               type="button"

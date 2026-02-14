@@ -43,6 +43,7 @@ export interface Order {
   customer: Customer;
   responsibleName: string;
   // shipmentMetadata: ShipmentMetadata;
-  shipmentMetadata: Record<string, string | number>;
+  shipmentMetadata: Record<string, string | number | boolean>;
   observations: string | null;
+  active?: boolean;
 }
